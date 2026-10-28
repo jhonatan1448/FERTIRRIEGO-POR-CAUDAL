@@ -81,7 +81,7 @@ opcion_mg = st.sidebar.selectbox(
 )
 
 # ==========================================
-# PANEL PRINCIPAL: ENTRADA DE REQUERIMIENTOS (PPM ÓXIDOS)
+# PANEL PRINCIPAL: ENTRADA DE REQUERIMIENTOS COMPLETOS
 # ==========================================
 st.header("🧪 Requerimientos Nutricionales del Cultivo")
 
@@ -90,18 +90,21 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     ppm_n_objetivo = st.number_input("PPM Nitrógeno Total (NT) Deseado:", value=202.9, step=5.0)
     ppm_cao = st.number_input("PPM Óxido de Calcio (CaO) deseadas:", value=241.2, step=1.0)
+    ppm_mgo = st.number_input("PPM Óxido de Magnesio (MgO) deseadas:", value=72.0, step=1.0)
     
 with col2:
     ppm_p2o5 = st.number_input("PPM Pentóxido de Fósforo (P₂O₅) deseadas:", value=97.0, step=1.0)
     ppm_k2o = st.number_input("PPM Óxido de Potasio (K₂O) deseadas:", value=278.7, step=1.0)
+    ppm_fe = st.number_input("PPM Hierro (Fe) deseadas:", value=3.07, format="%.2f")
 
 with col3:
-    ppm_mgo = st.number_input("PPM Óxido de Magnesio (MgO) deseadas:", value=72.0, step=1.0)
-    ppm_b = st.number_input("PPM Boro (B):", value=0.92, format="%.2f")
+    ppm_b = st.number_input("PPM Boro (B) deseadas:", value=0.92, format="%.2f")
+    ppm_zn = st.number_input("PPM Zinc (Zn) deseadas:", value=0.33, format="%.2f")
+    ppm_cu = st.number_input("PPM Cobre (Cu) deseadas:", value=0.06, format="%.2f")
 
 with col4:
-    ppm_zn = st.number_input("PPM Zinc (Zn):", value=0.33, format="%.2f")
-    ppm_cu = st.number_input("PPM Cobre (Cu):", value=0.06, format="%.2f")
+    ppm_mn = st.number_input("PPM Manganeso (Mn) deseadas:", value=2.47, format="%.2f")
+    ppm_mo = st.number_input("PPM Molibdeno (Mo) deseadas:", value=0.19, format="%.2f")
 
 # Distribución técnica requerida de Nitrógeno (80% Nitrato / 20% Amonio)
 ppm_no3_target = ppm_n_objetivo * 0.80
@@ -175,12 +178,13 @@ if ppm_compensar_n > 0:
     ppm_no3_acumulado += no3_nit_amonio
     ppm_nh4_acumulado += nh4_nit_amonio
 
-# 6. Micronutrientes (Gramos directos)
+# 6. Micronutrientes Quelatados (Pesajes en Gramos directos usando riquezas estándar de tus apuntes)
 g_boro = calcular_gramos(ppm_b, 20.5, volumen_agua)
 g_zinc = calcular_gramos(ppm_zn, 13.0, volumen_agua)
 g_cobre = calcular_gramos(ppm_cu, 12.0, volumen_agua)
-g_manganeso = calcular_gramos(2.47, 12.0, volumen_agua)
-g_molibdato = calcular_gramos(0.19, 10.0, volumen_agua)
+g_manganeso = calcular_gramos(ppm_mn, 12.0, volumen_agua)
+g_molibdato = calcular_gramos(ppm_mo, 10.0, volumen_agua)
+g_hierro = calcular_gramos(ppm_fe, 13.0, volumen_agua) # Hierro EDTA estándar soluble al 13%
 
 # ==========================================
 # SECCIÓN VISUAL: PANTALLA DE CONTROL METRICO
@@ -201,14 +205,15 @@ with c_nh4:
 # ==========================================
 st.header("📋 Dosificación Recomendada por Tanques")
 
-tab1, tab2 = st.tabs(["🛢️ TANQUE A (YaraLiva + Nitratos)", "🛢️ TANQUE B (Fósforo, Sulfatos y Micros)"])
+tab1, tab2 = st.tabs(["🛢️ TANQUE A (YaraLiva + Nitratos + Hierro)", "🛢️ TANQUE B (Fósforo, Sulfatos y Micros)"])
 
 with tab1:
-    st.subheader("Solución Concentrada A - Reactivos de Calcio")
+    st.subheader("Solución Concentrada A - Reactivos de Calcio y Hierro")
     st.markdown(f"• **YaraLiva CALCINIT (26.5% CaO):** `{g_calcinit / 1000:.2f} Kg`  \n *Aporte Real: {no3_calcinit:.1f} PPM NO₃⁻ | {nh4_calcinit:.1f} PPM NH₄⁺*")
     st.markdown(f"• **Nitrato Potásico (Master 15-5-30):** `{g_master / 1000:.2f} Kg`  \n *Aporte Real: {no3_master:.1f} PPM NO₃⁻ | {nh4_master:.1f} PPM NH₄⁺*")
     st.markdown(f"• **Nitrato de Amonio (Compensador Balance):** `{g_nitrato_amonio / 1000:.2f} Kg` ⚖️  \n *Aporte de Ajuste: {no3_nit_amonio:.1f} PPM NO₃⁻ | {nh4_nit_amonio:.1f} PPM NH₄⁺*")
-    st.caption("⚠️ Nota: Mantén este tanque libre de fósforo y sulfatos para prevenir la precipitación de yeso e incrustaciones químicas.")
+    st.markdown(f"• **Hierro EDTA (13% Fe):** `{g_hierro:.1f} g` ✨ *(Recuperado)*")
+    st.caption("⚠️ Nota: El Hierro Quelatado se mantiene en el Tanque A por estabilidad química y solubilidad junto al Calcio.")
 
 with tab2:
     st.subheader("Solución Concentrada B - Reactivos de Fondo y Microelementos")
@@ -216,11 +221,3 @@ with tab2:
     
     with col_b1:
         st.markdown("**Macronutrientes:**")
-        st.write(f"• **Fosfato Monopotásico (MKP - 52% P₂O₅):** `{g_fosfato_mono / 1000:.2f} Kg` *(Aporta tus {ppm_p2o5} PPM de P₂O₅)*")
-        st.write(f"• **Sulfato Potásico (Solupotasse - 51% K₂O):** `{g_solu_k / 1000:.2f} Kg`")
-        st.write(f"• **Fosfato Dipotásico (Haifa - 54% K₂O):** `{g_haifa_k / 1000:.2f} Kg`")
-        st.write(f"• **Sulfato de Magnesio (16% MgO):** `{g_sulf_mg / 1000:.2f} Kg`")
-        st.markdown(f"• **Nitrato de Magnesio (15% MgO):** `{g_nit_mg / 1000:.2f} Kg`  \n *Aporte Real: {no3_nitmag:.1f} PPM NO₃⁻ | 0.0 PPM NH₄⁺*")
-
-    with col_b2:
-        st.markdown("**Micronutrientes Quelatados (Pesajes en Gramos):**")
