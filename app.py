@@ -111,24 +111,21 @@ if opcion_npk != "Ninguno (Usar Simples)":
     for elemento in ["NO3", "NH4", "P2O5", "K2O"]:
         aportes[elemento] += calcular_ppm(g_npk_aplicar, db_npk[elemento], volumen_agua)
 
-# 3. POTASIO COMPLEMENTARIO (Solupotasse o Haifa DKP según selección de menú)
+# 3. POTASIO COMPLEMENTARIO (Solupotasse o Haifa DKP)
 k2o_restante = max(0.0, tgt_k2o - aportes["K2O"])
 if k2o_restante > 0:
     db_k_seleccionado = FERTILIZANTES_DB[opcion_k]
     g_fuente_k = calcular_gramos(k2o_restante, db_k_seleccionado["K2O"], volumen_agua)
     pesos_finales[opcion_k] = g_fuente_k
     aportes["K2O"] += k2o_restante
-    
-    # Si la fuente es Haifa DKP, arrastra de manera colateral un 41% de P2O5 al tanque
     if opcion_k == "Haifa DKP (0-41-54)":
         aportes["P2O5"] += calcular_ppm(g_fuente_k, db_k_seleccionado["P2O5"], volumen_agua)
 
-# 4. FÓSFORO COMPLEMENTARIO (MKP) -> Revisa cuánto falta tras los aportes del NPK y del Haifa DKP
+# 4. FÓSFORO COMPLEMENTARIO (MKP)
 p2o5_restante = max(0.0, tgt_p2o5 - aportes["P2O5"])
 if p2o5_restante > 0:
     g_mkp = calcular_gramos(p2o5_restante, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["P2O5"], volumen_agua)
     pesos_finales["Fosfato Monopotásico (MKP)"] = g_mkp
-    # El MKP también arrastra un 34% de K2O
     aportes["K2O"] += calcular_ppm(g_mkp, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["K2O"], volumen_agua)
     aportes["P2O5"] += p2o5_restante
 
@@ -180,10 +177,14 @@ tabla_data = {
 st.table(tabla_data)
 
 # ==========================================
-# RESUMEN TOTAL DE KILOGRAMOS REQUERIDOS
+# RESUMEN TOTAL DE KILOGRAMOS REQUERIDOS (Estructura Plana de Seguridad)
 # ==========================================
 st.markdown("---")
 st.header("🛒 LISTA FINAL DE PESAJE EN BODEGA (Total por Producto)")
-col_macro, col_micro = st.columns(2)
 
-with col_macro:
+st.subheader("⚖️ Macronutrientes (En Kilogramos)")
+for prod, g in pesos_finales.items():
+    if g > 0:
+        st.success(f"• **{prod}:** `{g/1000:.2f} Kg`")
+
+st.subheader("🧪 Micronutrientes Oficiales Daymsa Calibrados (En Gramos)")
