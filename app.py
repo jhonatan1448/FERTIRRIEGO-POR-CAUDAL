@@ -152,12 +152,12 @@ if n_compensar > 0:
     aportes["NH4"] += calcular_ppm(g_nit_amonio, FERTILIZANTES_DB["Nitrato de Amonio"]["NH4"], volumen_agua)
 
 # 7. MICRONUTRIENTES EXCLUSIVOS - CERTIFICACIÓN EXACTA MARBETE DAYMSA COLOMBIA
-g_naturquel_fe = calcular_gramos(tgt_fe, 6.0, volumen_agua)       # Naturquel Fe (6.0% Fe EDDHA)
-g_klipboro = calcular_gramos(tgt_b, 21.0, volumen_agua)            # Klip Boro Sólido (21.0% B)
-g_kellus_cu = calcular_gramos(tgt_cu, 6.0, volumen_agua)            # Kellus Cu (6.0% Cu EDTA)
-g_naturzinc = calcular_gramos(tgt_zn, 14.3, volumen_agua)          # Naturzinc Sólido (14.3% Zn)
-g_naturmanganeso = calcular_gramos(tgt_mn, 12.8, volumen_agua)      # Naturmanganeso (12.8% Mn)
-g_molibk = calcular_gramos(tgt_mo, 9.2, volumen_agua)               # Molibk (9.2% Mo)
+g_naturquel_fe = (tgt_fe * volumen_agua * 0.1) / 6.0
+g_klipboro = (tgt_b * volumen_agua * 0.1) / 21.0
+g_kellus_cu = (tgt_cu * volumen_agua * 0.1) / 6.0
+g_naturzinc = (tgt_zn * volumen_agua * 0.1) / 14.3
+g_naturmanganeso = (tgt_mn * volumen_agua * 0.1) / 12.8
+g_molibk = (tgt_mo * volumen_agua * 0.1) / 9.2
 
 # ==========================================
 # VISUALIZACIÓN: TABLA DE CONTROL DE APORTES
@@ -188,3 +188,7 @@ for prod, g in pesos_finales.items():
         st.success(f"• **{prod}:** `{g/1000:.2f} Kg`")
 
 st.subheader("🧪 Micronutrientes Oficiales Daymsa Calibrados (En Gramos)")
+st.warning(f"• **Naturquel Fe (Daymsa - 6% Fe EDDHA):** `{g_naturquel_fe:.1f} g`")
+st.warning(f"• **Klip Boro (Daymsa - 21% B):** `{g_klipboro:.1f} g`")
+st.warning(f"• **Kellus Cu (Daymsa - 6% Cu):** `{g_kellus_cu:.1f} g`")
+st.warning(f"• **Naturzinc (Daymsa - 14.3% Zn):** `{g_naturzinc:.1f} g`")
