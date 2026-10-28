@@ -33,7 +33,7 @@ else:
     caudal = st.sidebar.number_input("Caudal del emisor / sistema (L/hora):", min_value=1, value=5000)
     tiempo = st.sidebar.number_input("Tiempo de riego (Horas):", min_value=0.1, value=3.2, step=0.1)
     volumen_agua = caudal * tiempo
-    st.sidebar.success(f"Volumen calculado: {volumen_agua:,.0f} Litros")
+    st.sidebar.success(f"Volumen calculated: {volumen_agua:,.0f} Litros")
 
 # ==========================================
 # PANEL PRINCIPAL: MACRONUTRIENTES
@@ -88,24 +88,24 @@ col_b, col_zn, col_mn, col_mo = st.columns(4)
 
 with col_b:
     ppm_b = st.number_input("PPM Boro (B):", value=0.76, format="%.2f")
-    %_b = st.number_input("% Boro en producto:", value=20.5, key="b_pct")
-    g_boro = calcular_gramos(ppm_b, %_b, volumen_agua)
+    porcentaje_b = st.number_input("% Boro en producto:", value=20.5, key="b_pct")
+    g_boro = calcular_gramos(ppm_b, porcentaje_b, volumen_agua)
     st.metric("Klip Boro Requerido", f"{g_boro:.1f} g")
 
 with col_zn:
     ppm_zn = st.number_input("PPM Zinc (Zn):", value=0.30, format="%.2f")
-    %_zn = st.number_input("% Zinc en producto:", value=13.0, key="zn_pct")
-    g_zinc = calcular_gramos(ppm_zn, %_zn, volumen_agua)
+    porcentaje_zn = st.number_input("% Zinc en producto:", value=13.0, key="zn_pct")
+    g_zinc = calcular_gramos(ppm_zn, porcentaje_zn, volumen_agua)
     st.metric("Zinc EDTA Requerido", f"{g_zinc:.1f} g")
 
 with col_mn:
     ppm_mn = st.number_input("PPM Manganeso (Mn):", value=2.00, format="%.2f")
-    %_mn = st.number_input("% Mn en producto:", value=12.0, key="mn_pct")
-    g_mn = calcular_gramos(ppm_mn, %_mn, volumen_agua)
+    porcentaje_mn = st.number_input("% Mn en producto:", value=12.0, key="mn_pct")
+    g_mn = calcular_gramos(ppm_mn, porcentaje_mn, volumen_agua)
     st.metric("Manganeso EDTA", f"{g_mn:.1f} g")
 
 with col_mo:
     ppm_mo = st.number_input("PPM Molibdeno (Mo):", value=0.19, format="%.2f")
-    %_mo = st.number_input("% Mo en producto:", value=10.0, key="mo_pct")
-    g_mo = calcular_gramos(ppm_mo, %_mo, volumen_agua)
+    porcentaje_mo = st.number_input("% Mo en producto:", value=10.0, key="mo_pct")
+    g_mo = calcular_gramos(ppm_mo, porcentaje_mo, volumen_agua)
     st.metric("Molibdato Requerido", f"{g_mo:.1f} g")
