@@ -1,10 +1,9 @@
 import streamlit as st
 
-# Configuración estética de la app web
-st.set_page_config(page_title="Fertirriego Pro", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="Fertirriego Pro - Inteligente", page_icon="🌱", layout="wide")
 
-st.title("🌱 Software de Fertirriego Avanzado")
-st.write("Cálculos instantáneos basados en PPM elementales y factores de conversión óxido.")
+st.title("🌱 Software de Fertirriego con Menú de Selección")
+st.write("Selecciona tus fertilizantes disponibles en bodega y calcula la receta exacta al instante.")
 
 # Factores de conversión oficiales (según tu manual Nutriterra)
 FACTORES = {
@@ -33,79 +32,115 @@ else:
     caudal = st.sidebar.number_input("Caudal del emisor / sistema (L/hora):", min_value=1, value=5000)
     tiempo = st.sidebar.number_input("Tiempo de riego (Horas):", min_value=0.1, value=3.2, step=0.1)
     volumen_agua = caudal * tiempo
-    st.sidebar.success(f"Volumen calculated: {volumen_agua:,.0f} Litros")
+    st.sidebar.success(f"Volumen calculado: {volumen_agua:,.0f} Litros")
 
 # ==========================================
-# PANEL PRINCIPAL: MACRONUTRIENTES
+# SELECCIÓN DE FERTILIZANTES EN BODEGA (MENÚS)
 # ==========================================
-st.header("🧪 Macronutrientes (PPM Requeridas)")
+st.sidebar.header("📦 Fertilizantes Disponibles")
+
+# Menú interactivo para Potasio (K)
+opcion_k = st.sidebar.selectbox(
+    "Fuente de Potasio (K):",
+    ["Sulfato de Potasio (Solupotasse)", "Nitrato Potásico (Master 15-5-30)", "Fosfato Dipotásico (Haifa)"]
+)
+
+# Menú interactivo para Magnesio (Mg)
+opcion_mg = st.sidebar.selectbox(
+    "Fuente de Magnesio (Mg):",
+    ["Sulfato de Magnesio", "Nitrato de Magnesio"]
+)
+
+# ==========================================
+# PANEL PRINCIPAL: ENTRADA DE REQUERIMIENTOS (PPM)
+# ==========================================
+st.header("🧪 Requerimientos Nutricionales del Cultivo (PPM Elementales)")
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.subheader("Calcio (Ca)")
-    ppm_ca = st.number_input("PPM Ca deseadas:", value=172.3, step=1.0)
-    grado_ca = st.number_input("% CaO (Calcinit):", value=26.5)
-    
-    ppm_cao = ppm_ca * FACTORES["Ca_a_CaO"]
-    kg_calcinit = calcular_gramos(ppm_cao, grado_ca, volumen_agua) / 1000
-    st.metric("Calcinit Necesario", f"{kg_calcinit:.2f} Kg")
+    ppm_ca = st.number_input("PPM Calcio (Ca) deseadas:", value=172.3, step=1.0)
+    ppm_mg = st.number_input("PPM Magnesio (Mg) deseadas:", value=45.0, step=1.0)
 
 with col2:
-    st.subheader("Fósforo (P)")
-    ppm_p = st.number_input("PPM P deseadas:", value=43.0, step=1.0)
-    grado_p = st.number_input("% P2O5 (Haifa):", value=41.0)
-    
-    ppm_p2o5 = ppm_p * FACTORES["P_a_P2O5"]
-    kg_fosfato = calcular_gramos(ppm_p2o5, grado_p, volumen_agua) / 1000
-    st.metric("Fosfato Necesario", f"{kg_fosfato:.2f} Kg")
+    ppm_p = st.number_input("PPM Fósforo (P) deseadas:", value=43.0, step=1.0)
+    ppm_k = st.number_input("PPM Potasio (K) deseadas:", value=232.3, step=1.0)
 
 with col3:
-    st.subheader("Potasio (K)")
-    ppm_k = st.number_input("PPM K deseadas:", value=70.0, step=1.0)
-    grado_k = st.number_input("% K2O (Solupotasse):", value=50.0)
-    
-    ppm_k2o = ppm_k * FACTORES["K_a_K2O"]
-    kg_potasio = calcular_gramos(ppm_k2o, grado_k, volumen_agua) / 1000
-    st.metric("Sulfato K Necesario", f"{kg_potasio:.2f} Kg")
+    ppm_b = st.number_input("PPM Boro (B):", value=0.92, format="%.2f")
+    ppm_zn = st.number_input("PPM Zinc (Zn):", value=0.33, format="%.2f")
 
 with col4:
-    st.subheader("Magnesio (Mg)")
-    ppm_mg = st.number_input("PPM Mg deseadas:", value=45.0, step=1.0)
-    grado_mg = st.number_input("% MgO (Sulfato Mg):", value=16.0)
-    
-    ppm_mgo = ppm_mg * FACTORES["Mg_a_MgO"]
-    kg_magnesio = calcular_gramos(ppm_mgo, grado_mg, volumen_agua) / 1000
-    st.metric("Sulfato Mg Necesario", f"{kg_magnesio:.2f} Kg")
+    ppm_mn = st.number_input("PPM Manganeso (Mn):", value=2.47, format="%.2f")
+    ppm_mo = st.number_input("PPM Molibdeno (Mo):", value=0.19, format="%.2f")
 
 # ==========================================
-# PANEL SECUNDARIO: MICRONUTRIENTES (EDTA)
+# LÓGICA DE CONVERSIONES ÓXIDO
+# ==========================================
+ppm_cao = ppm_ca * FACTORES["Ca_a_CaO"]
+ppm_p2o5 = ppm_p * FACTORES["P_a_P2O5"]
+ppm_mgo = ppm_mg * FACTORES["Mg_a_MgO"]
+ppm_k2o = ppm_k * FACTORES["K_a_K2O"]
+
+# ==========================================
+# DESPLIEGUE VISUAL POR TANQUES COMPATIBLES
 # ==========================================
 st.markdown("---")
-st.header("🔬 Micronutrientes (EDTA / Quelatos)")
+st.header("📋 Receta Dinámica Distribuida por Tanques")
 
-col_b, col_zn, col_mn, col_mo = st.columns(4)
+tab1, tab2 = st.tabs(["🛢️ TANQUE A (Calcio y Nitratos)", "🛢️ TANQUE B (Fósforo, Sulfatos y Micros)"])
 
-with col_b:
-    ppm_b = st.number_input("PPM Boro (B):", value=0.76, format="%.2f")
-    porcentaje_b = st.number_input("% Boro en producto:", value=20.5, key="b_pct")
-    g_boro = calcular_gramos(ppm_b, porcentaje_b, volumen_agua)
-    st.metric("Klip Boro Requerido", f"{g_boro:.1f} g")
+with tab1:
+    st.subheader("Nutrientes Concentrados")
+    
+    # Calcinit va por defecto en el Tanque A
+    g_calcinit = calcular_gramos(ppm_cao, 26.5, volumen_agua)
+    st.write(f"• **Nitrato Cálcico (Calcinit):** `{g_calcinit / 1000:.2f} Kg` *(Aporta {ppm_ca} PPM de Ca)*")
+    
+    # Si seleccionas Master en la barra lateral, aparece en el Tanque A (por compatibilidad)
+    if opcion_k == "Nitrato Potásico (Master 15-5-30)":
+        g_master = calcular_gramos(ppm_k2o, 30.0, volumen_agua)
+        st.write(f"• **Nitrato Potásico (Master 15-5-30):** `{g_master / 1000:.2f} Kg` *(Aporta {ppm_k} PPM de K)*")
+        st.info("💡 El Nitrato de Potasio se ha asignado al Tanque A para mantener la solubilidad.")
 
-with col_zn:
-    ppm_zn = st.number_input("PPM Zinc (Zn):", value=0.30, format="%.2f")
-    porcentaje_zn = st.number_input("% Zinc en producto:", value=13.0, key="zn_pct")
-    g_zinc = calcular_gramos(ppm_zn, porcentaje_zn, volumen_agua)
-    st.metric("Zinc EDTA Requerido", f"{g_zinc:.1f} g")
+with tab2:
+    st.subheader("Nutrientes de Fondo y Microelementos")
+    col_b1, col_b2 = st.columns(2)
+    
+    with col_b1:
+        st.markdown("**Macronutrientes Seleccionados:**")
+        
+        # Fósforo Base (Fosfato Monopotásico)
+        g_fosfato_mono = calcular_gramos(ppm_p2o5, 41.0, volumen_agua)
+        st.write(f"• **Fosfato Monopotásico:** `{g_fosfato_mono / 1000:.2f} Kg`")
+        
+        # Lógica del menú de Potasio (si no es Master)
+        if opcion_k == "Sulfato de Potasio (Solupotasse)":
+            g_solu_k = calcular_gramos(ppm_k2o, 50.0, volumen_agua)
+            st.write(f"• **Sulfato Potásico (Solupotasse):** `{g_solu_k / 1000:.2f} Kg`")
+        elif opcion_k == "Fosfato Dipotásico (Haifa)":
+            g_haifa_k = calcular_gramos(ppm_k2o, 54.0, volumen_agua)
+            st.write(f"• **Fosfato Dipotásico (Haifa K=54%):** `{g_haifa_k / 1000:.2f} Kg`")
 
-with col_mn:
-    ppm_mn = st.number_input("PPM Manganeso (Mn):", value=2.00, format="%.2f")
-    porcentaje_mn = st.number_input("% Mn en producto:", value=12.0, key="mn_pct")
-    g_mn = calcular_gramos(ppm_mn, porcentaje_mn, volumen_agua)
-    st.metric("Manganeso EDTA", f"{g_mn:.1f} g")
+        # Lógica del menú de Magnesio
+        if opcion_mg == "Sulfato de Magnesio":
+            g_sulf_mg = calcular_gramos(ppm_mgo, 16.0, volumen_agua)
+            st.write(f"• **Sulfato de Magnesio (16% MgO):** `{g_sulf_mg / 1000:.2f} Kg`")
+        elif opcion_mg == "Nitrato de Magnesio":
+            g_nit_mg = calcular_gramos(ppm_mg, 10.67, volumen_agua) # Directo según tus notas
+            st.write(f"• **Nitrato de Magnesio (10.67% Mg):** `{g_nit_mg / 1000:.2f} Kg`")
 
-with col_mo:
-    ppm_mo = st.number_input("PPM Molibdeno (Mo):", value=0.19, format="%.2f")
-    porcentaje_mo = st.number_input("% Mo en producto:", value=10.0, key="mo_pct")
-    g_mo = calcular_gramos(ppm_mo, porcentaje_mo, volumen_agua)
-    st.metric("Molibdato Requerido", f"{g_mo:.1f} g")
+    with col_b2:
+        st.markdown("**Micronutrientes Quelatados (Fijos):**")
+        g_boro = calcular_gramos(ppm_b, 20.5, volumen_agua)
+        g_zinc = calcular_gramos(ppm_zn, 13.0, volumen_agua)
+        g_manganeso = calcular_gramos(ppm_mn, 12.0, volumen_agua)
+        g_molibdato = calcular_gramos(ppm_mo, 10.0, volumen_agua)
+        
+        st.write(f"• **Klip Boro:** `{g_boro:.1f} gramos`")
+        st.write(f"• **Zinc EDTA:** `{g_zinc:.1f} gramos`")
+        st.write(f"• **Manganeso EDTA:** `{g_manganeso:.1f} gramos`")
+        st.write(f"• **Molibdato de Sodio:** `{g_molibdato:.1f} gramos`")
+
+st.divider()
+st.caption("Estructura de menús reactivos basada en condicionales `if/elif`. Cambia las fuentes en la barra de la izquierda para ver el cambio instantáneo.")
