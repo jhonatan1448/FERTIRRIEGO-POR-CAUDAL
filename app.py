@@ -141,7 +141,7 @@ elif opcion_k == "Fosfato Dipotásico (Haifa)":
     db_haifa = FERTILIZANTES_DB["Fosfato Dipotásico (Haifa)"]
     g_haifa_k = calcular_gramos(ppm_k2o, db_haifa["riqueza"], volumen_agua)
 
-# 3. Magnesio (Selección de menú sin condicionales sueltos que causen error)
+# 3. Magnesio (Selección de menú)
 g_sulf_mg, g_nit_mg = 0.0, 0.0
 no3_nitmag = 0.0
 
@@ -206,13 +206,8 @@ tab1, tab2 = st.tabs(["🛢️ TANQUE A (YaraLiva + Nitratos)", "🛢️ TANQUE 
 with tab1:
     st.subheader("Solución Concentrada A - Reactivos de Calcio")
     st.markdown(f"• **YaraLiva CALCINIT (26.5% CaO):** `{g_calcinit / 1000:.2f} Kg`  \n *Aporte Real: {no3_calcinit:.1f} PPM NO₃⁻ | {nh4_calcinit:.1f} PPM NH₄⁺*")
-    
-    if g_master > 0:
-        st.markdown(f"• **Nitrato Potásico (Master 15-5-30):** `{g_master / 1000:.2f} Kg`  \n *Aporte Real: {no3_master:.1f} PPM NO₃⁻ | {nh4_master:.1f} PPM NH₄⁺*")
-    
-    if g_nitrato_amonio > 0:
-        st.markdown(f"• **Nitrato de Amonio (Compensador Balance):** `{g_nitrato_amonio / 1000:.2f} Kg` ⚖️  \n *Aporte de Ajuste: {no3_nit_amonio:.1f} PPM NO₃⁻ | {nh4_nit_amonio:.1f} PPM NH₄⁺*")
-    
+    st.markdown(f"• **Nitrato Potásico (Master 15-5-30):** `{g_master / 1000:.2f} Kg`  \n *Aporte Real: {no3_master:.1f} PPM NO₃⁻ | {nh4_master:.1f} PPM NH₄⁺*")
+    st.markdown(f"• **Nitrato de Amonio (Compensador Balance):** `{g_nitrato_amonio / 1000:.2f} Kg` ⚖️  \n *Aporte de Ajuste: {no3_nit_amonio:.1f} PPM NO₃⁻ | {nh4_nit_amonio:.1f} PPM NH₄⁺*")
     st.caption("⚠️ Nota: Mantén este tanque libre de fósforo y sulfatos para prevenir la precipitación de yeso e incrustaciones químicas.")
 
 with tab2:
@@ -222,11 +217,10 @@ with tab2:
     with col_b1:
         st.markdown("**Macronutrientes:**")
         st.write(f"• **Fosfato Monopotásico (MKP - 52% P₂O₅):** `{g_fosfato_mono / 1000:.2f} Kg` *(Aporta tus {ppm_p2o5} PPM de P₂O₅)*")
-        
-        if g_solu_k > 0:
-            st.write(f"• **Sulfato Potásico (Solupotasse - 51% K₂O):** `{g_solu_k / 1000:.2f} Kg`")
-        if g_haifa_k > 0:
-            st.write(f"• **Fosfato Dipotásico (Haifa - 54% K₂O):** `{g_haifa_k / 1000:.2f} Kg`")
-        if g_sulf_mg > 0:
-            st.write(f"• **Sulfato de Magnesio (16% MgO):** `{g_sulf_mg / 1000:.2f} Kg`")
-        if g_nit_mg > 0:
+        st.write(f"• **Sulfato Potásico (Solupotasse - 51% K₂O):** `{g_solu_k / 1000:.2f} Kg`")
+        st.write(f"• **Fosfato Dipotásico (Haifa - 54% K₂O):** `{g_haifa_k / 1000:.2f} Kg`")
+        st.write(f"• **Sulfato de Magnesio (16% MgO):** `{g_sulf_mg / 1000:.2f} Kg`")
+        st.markdown(f"• **Nitrato de Magnesio (15% MgO):** `{g_nit_mg / 1000:.2f} Kg`  \n *Aporte Real: {no3_nitmag:.1f} PPM NO₃⁻ | 0.0 PPM NH₄⁺*")
+
+    with col_b2:
+        st.markdown("**Micronutrientes Quelatados (Pesajes en Gramos):**")
