@@ -141,7 +141,7 @@ elif opcion_k == "Fosfato Dipotásico (Haifa)":
     db_haifa = FERTILIZANTES_DB["Fosfato Dipotásico (Haifa)"]
     g_haifa_k = calcular_gramos(ppm_k2o, db_haifa["riqueza"], volumen_agua)
 
-# 3. Magnesio (Selección de menú)
+# 3. Magnesio (Selección de menú sin condicionales sueltos que causen error)
 g_sulf_mg, g_nit_mg = 0.0, 0.0
 no3_nitmag = 0.0
 
@@ -178,9 +178,9 @@ if ppm_compensar_n > 0:
 # 6. Micronutrientes (Gramos directos)
 g_boro = calcular_gramos(ppm_b, 20.5, volumen_agua)
 g_zinc = calcular_gramos(ppm_zn, 13.0, volumen_agua)
-g_cobre = calcular_gramos(ppm_cu, 12.0, volumen_agua)  # Kellus Cu EDTA (12%)
-g_manganeso = calcular_gramos(2.47, 12.0, volumen_agua)  # Manganeso EDTA (12%)
-g_molibdato = calcular_gramos(0.19, 10.0, volumen_agua)  # Molibdato de Sodio (10%)
+g_cobre = calcular_gramos(ppm_cu, 12.0, volumen_agua)
+g_manganeso = calcular_gramos(2.47, 12.0, volumen_agua)
+g_molibdato = calcular_gramos(0.19, 10.0, volumen_agua)
 
 # ==========================================
 # SECCIÓN VISUAL: PANTALLA DE CONTROL METRICO
@@ -225,7 +225,8 @@ with tab2:
         
         if g_solu_k > 0:
             st.write(f"• **Sulfato Potásico (Solupotasse - 51% K₂O):** `{g_solu_k / 1000:.2f} Kg`")
-        elif g_haifa_k > 0:
+        if g_haifa_k > 0:
             st.write(f"• **Fosfato Dipotásico (Haifa - 54% K₂O):** `{g_haifa_k / 1000:.2f} Kg`")
-
         if g_sulf_mg > 0:
+            st.write(f"• **Sulfato de Magnesio (16% MgO):** `{g_sulf_mg / 1000:.2f} Kg`")
+        if g_nit_mg > 0:
