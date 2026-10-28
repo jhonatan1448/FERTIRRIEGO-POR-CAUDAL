@@ -177,7 +177,7 @@ tabla_data = {
 st.table(tabla_data)
 
 # ==========================================
-# RESUMEN TOTAL DE REQUERIMIENTOS (Estructura Plana y Completa)
+# RESUMEN TOTAL DE REQUERIMIENTOS (Estructura Plana Garantizada)
 # ==========================================
 st.markdown("---")
 st.header("🛒 LISTA FINAL DE PESAJE EN BODEGA (Total por Producto)")
