@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Simulador de Fertirriego Colombia Pro", page_icon="🌱", layout="wide")
 
-st.title("🌱 Simulador Manual de Fertirriego Avanzado")
+st.title("🌱 Software de Fertirriego Profesional")
 st.write("Ajusta tus metas de PPM, los Kilogramos/Gramos a la izquierda, o añade fertilizantes nuevos a tu bodega en tiempo real.")
 
 # Porcentajes de Menores Sólidos Daymsa
@@ -12,7 +12,6 @@ PCT_CU = 13.5
 PCT_ZN = 13.0
 PCT_MN = 12.0
 PCT_MO = 10.0
-S_SULMAG = 13.0
 
 # ==========================================
 # REGLA DE MEMORIA SEGURA: INVENTARIO EDITABLE DE NUEVAS FUENTES
@@ -97,7 +96,7 @@ g_mn = st.sidebar.number_input("Naturmanganeso (g):", min_value=0.0, value=348.8
 g_mo = st.sidebar.number_input("Molibk (g):", min_value=0.0, value=2.8, step=0.5)
 
 # ==========================================
-# PANEL CENTRAL PASO 2: METAS MODIFICABLES
+# PANEL CENTRAL PASO 1: METAS MODIFICABLES
 # ==========================================
 st.markdown("---")
 st.header("🎯 1. Tus Metas Teóricas Requeridas (PPM)")
@@ -121,59 +120,50 @@ with col4:
     tgt_so3 = st.number_input("Meta Azufre (SO₃):", value=45.0, step=1.0)
 
 # ==========================================
-# MATEMÁTICA EN LÍNEA PLANA DE TU CALCULADORA MANUAL
+# MATEMÁTICA PLANA DIRECTA DE TU CALCULADORA DE CAMPO
 # ==========================================
-def calcular_ppm_campo(kg_fert, pct_elemento):
-    if volumen_agua <= 0 or kg_fert <= 0 or pct_elemento <= 0:
-        return 0.0
-    return ((kg_fert * 1000.0) * pct_elemento) / denominador_agua
+ppm_cao_calcinit = ((kg_calcinit * 1000.0) * 26.0) / denominador_agua
+ppm_p2o5_pony = ((kg_pony * 1000.0) * 3.0) / denominador_agua
+ppm_k2o_pony = ((kg_pony * 1000.0) * 43.0) / denominador_agua
+ppm_p2o5_dkp = ((kg_dkp * 1000.0) * 41.0) / denominador_agua
+ppm_k2o_dkp = ((kg_dkp * 1000.0) * 54.0) / denominador_agua
+ppm_k2o_soluk = ((kg_soluk * 1000.0) * 50.0) / denominador_agua
+ppm_so3_soluk = ((kg_soluk * 1000.0) * 18.0) / denominador_agua
+ppm_p2o5_mkp = ((kg_mkp * 1000.0) * 52.0) / denominador_agua
+ppm_k2o_mkp = ((kg_mkp * 1000.0) * 34.0) / denominador_agua
+ppm_mgo_magboro = ((kg_magboro * 1000.0) * 15.5) / denominador_agua
+ppm_mgo_sulfmg = ((kg_sulfmg * 1000.0) * 16.4) / denominador_agua
+ppm_so3_sulfmg = ((kg_sulfmg * 1000.0) * 13.0) # Corregido con el número directo del Sulmag escrito plano
 
-# Cálculos de Fuentes Estándar
-ppm_cao_calcinit = calcular_ppm_campo(kg_calcinit, 26.0)
-ppm_p2o5_pony = calcular_ppm_campo(kg_pony, 3.0)
-ppm_k2o_pony = calcular_ppm_campo(kg_pony, 43.0)
-ppm_p2o5_dkp = calcular_ppm_campo(kg_dkp, 41.0)
-ppm_k2o_dkp = calcular_ppm_campo(kg_dkp, 54.0)
-ppm_k2o_soluk = calcular_ppm_campo(kg_soluk, 50.0)
-ppm_so3_soluk = calcular_ppm_campo(kg_soluk, 18.0)
-ppm_p2o5_mkp = calcular_ppm_campo(kg_mkp, 52.0)
-ppm_k2o_mkp = calcular_ppm_campo(kg_mkp, 34.0)
-ppm_mgo_magboro = calcular_ppm_campo(kg_magboro, 15.5)
-ppm_mgo_sulfmg = calcular_ppm_campo(kg_sulfmg, 16.4)
-ppm_so3_sulfmg = calcular_ppm_campo(kg_sulfmg, S_SULMAG)
-
-# Nitrógeno Nítrico y Amoniacal Base
+# Nitrógeno Nítrico y Amoniacal Base de la Libreta
 ppm_no3_calcinit = (kg_calcinit * 1000.0 * 14.4) / (2600.0 / (197.3 / 72.2))
 ppm_no3_pony = (kg_pony * 1000.0 * 13.0) / (2600.0 / (197.3 / 72.2))
 ppm_no3_magboro = (kg_magboro * 1000.0 * 10.8) / (2600.0 / (197.3 / 72.2))
-ppm_no3_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
+ppm_no3_nitamonio = ((kg_nitamonio * 1000.0) * 17.0) / denominador_agua
 
-ppm_nh4_calcinit = calcular_ppm_campo(kg_calcinit, 1.1)
-ppm_nh4_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
+ppm_nh4_calcinit = ((kg_calcinit * 1000.0) * 1.1) / denominador_agua
+ppm_nh4_nitamonio = ((kg_nitamonio * 1000.0) * 17.0) / denominador_agua
 
-# Acumuladores para marcas nuevas
+# Acumuladores para marcas nuevas creadas por el usuario
 extra_no3_crudo, extra_nh4, extra_cao, extra_p2o5, extra_k2o, extra_mgo, extra_so3 = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 extra_fe, extra_mn, extra_zn, extra_cu, extra_b, extra_mo = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
 for prod_n, kg_n in pesos_nuevos.items():
     if kg_n > 0:
         db_n = st.session_state.nuevos_fertilizantes[prod_n]
-        extra_cao += calcular_ppm_campo(kg_n, db_n.get("CaO", 0.0))
-        extra_p2o5 += calcular_ppm_campo(kg_n, db_n.get("P2O5", 0.0))
-        extra_k2o += calcular_ppm_campo(kg_n, db_n.get("K2O", 0.0))
-        extra_mgo += calcular_ppm_campo(kg_n, db_n.get("MgO", 0.0))
-        extra_so3 += calcular_ppm_campo(kg_n, db_n.get("SO3", 0.0))
-        extra_nh4 += calcular_ppm_campo(kg_n, db_n.get("NH4", 0.0))
-        extra_no3_crudo += calcular_ppm_campo(kg_n, db_n.get("NO3", 0.0))
+        extra_cao += ((kg_n * 1000.0) * db_n.get("CaO", 0.0)) / denominador_agua
+        extra_p2o5 += ((kg_n * 1000.0) * db_n.get("P2O5", 0.0)) / denominador_agua
+        extra_k2o += ((kg_n * 1000.0) * db_n.get("K2O", 0.0)) / denominador_agua
+        extra_mgo += ((kg_n * 1000.0) * db_n.get("MgO", 0.0)) / denominador_agua
+        extra_so3 += ((kg_n * 1000.0) * db_n.get("SO3", 0.0)) / denominador_agua
+        extra_nh4 += ((kg_n * 1000.0) * db_n.get("NH4", 0.0)) / denominador_agua
+        extra_no3_crudo += ((kg_n * 1000.0) * db_n.get("NO3", 0.0)) / denominador_agua
         
-        extra_fe += calcular_ppm_campo(kg_n, db_n.get("Fe", 0.0))
-        extra_mn += calcular_ppm_campo(kg_n, db_n.get("Mn", 0.0))
-        extra_zn += calcular_ppm_campo(kg_n, db_n.get("Zn", 0.0))
-        extra_cu += calcular_ppm_campo(kg_n, db_n.get("Cu", 0.0))
-        extra_b += calcular_ppm_campo(kg_n, db_n.get("B", 0.0))
-        extra_mo += calcular_ppm_campo(kg_n, db_n.get("Mo", 0.0))
+        extra_fe += ((kg_n * 1000.0) * db_n.get("Fe", 0.0)) / denominador_agua
+        extra_mn += ((kg_n * 1000.0) * db_n.get("Mn", 0.0)) / denominador_agua
+        extra_zn += ((kg_n * 1000.0) * db_n.get("Zn", 0.0)) / denominador_agua
+        extra_cu += ((kg_n * 1000.0) * db_n.get("Cu", 0.0)) / denominador_agua
+        extra_b += ((kg_n * 1000.0) * db_n.get("B", 0.0)) / denominador_agua
+        extra_mo += ((kg_n * 1000.0) * db_n.get("Mo", 0.0)) / denominador_agua
 
-# CONSOLIDACIÓN FINAL
-total_no3 = ppm_no3_calcinit + ppm_no3_pony + ppm_no3_magboro + ppm_no3_nitamonio + (extra_no3_crudo * (197.3 / 72.2))
-total_nh4 = ppm_nh4_calcinit + ppm_nh4_nitamonio + extra_nh4
-total_cao = ppm_cao_calcinit + extra_cao
+# CONSOLIDACIÓN FINAL TOTAL DE PPM LOGRADAS
