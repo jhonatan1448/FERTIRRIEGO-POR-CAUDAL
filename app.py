@@ -3,7 +3,7 @@ import streamlit as st
 st.set_page_config(page_title="Fertirriego Inteligente Pro", page_icon="🌱", layout="wide")
 
 st.title("🌱 Software Profesional de Fertirriego (Líneas Oficiales Colombia)")
-st.write("Auditoría milimétrica por elemento. Balance dinámico inteligente con descuento de agua de riego.")
+st.write("Auditoría milimétrica por elemento. Balance dinámico con prioridad absoluta en Potasio (K₂O).")
 
 # ==========================================
 # BASE DE DATOS DE FERTILIZANTES AGRUPADA (Riquezas Oficiales)
@@ -60,7 +60,7 @@ opcion_npk = st.sidebar.selectbox(
     "Fórmula NPK Comercial Compleja:",
     ["Ninguno (Usar Simples)", "Van Iperen INICIO (11-32-11)", "Van Iperen DESARROLLO (20-20-20)", "Van Iperen PRODUCCION (12-5-40)", "Haifa Poly-Feed INICIO (13-36-13)", "Haifa Poly-Feed DESARROLLO (19-19-19)", "Haifa Poly-Feed PRODUCCION (10-10-43)"]
 )
-opcion_k = st.sidebar.selectbox("Fuente Simple de Potasio:", ["Sulfato de Potasio (Solupotasse)", "Haifa DKP (0-41-54)"])
+opcion_k = st.sidebar.selectbox("Fuente Simple de Potasio Alternativa:", ["Sulfato de Potasio (Solupotasse)", "Haifa DKP (0-41-54)"])
 opcion_mg = st.sidebar.selectbox("Fuente de Magnesio:", ["Sulfato de Magnesio", "Nitrato de Magnesio"])
 
 # ==========================================
@@ -85,27 +85,19 @@ with col4:
     tgt_mn = st.number_input("Meta Manganeso (Mn):", value=2.47)
     tgt_mo = st.number_input("Meta Molibdeno (Mo):", value=0.19)
 
-# Sub-metas de Nitrógeno fijadas al 80% Nitrato / 20% Amonio fijas
+# Sub-metas fijas de Nitrógeno al 80/20
 tgt_no3 = tgt_n * 0.80
 tgt_nh4 = tgt_n * 0.20
-
-# Cálculo de necesidades NETAS (restando el agua) que usará el algoritmo secuencial
-net_no3 = max(0.0, tgt_no3 - no3_agua)
-net_nh4 = max(0.0, tgt_nh4 - nh4_agua)
-net_cao = max(0.0, tgt_cao - cao_agua)
-net_p2o5 = max(0.0, tgt_p2o5 - p2o5_agua)
-net_k2o = max(0.0, tgt_k2o - k2o_agua)
-net_mgo = max(0.0, tgt_mgo - mgo_agua)
 
 # Inicializador de aportes totales logrados reales en el riego (sumando la base del agua)
 aportes = {"NO3": no3_agua, "NH4": nh4_agua, "CaO": cao_agua, "P2O5": p2o5_agua, "K2O": k2o_agua, "MgO": mgo_agua, "SO3": 0.0}
 pesos_finales = {}
 
 # ==============================================================================
-# ALGORITMO DE BALANCE DINÁMICO SECUENCIAL
+# ALGORITMO DE BALANCE DINÁMICO CON PRIORIDAD EN POTASIO (K₂O)
 # ==============================================================================
 
-# Paso 1. MICRONUTRIENTES DAYMSA SÓLIDOS
+# Paso 1. MICRONUTRIENTES DAYMSA SÓLIDOS (Klip Boro aporta 3% K2O)
 g_klipboro = calcular_gramos(tgt_b, 20.5, volumen_agua)
 g_naturquel_fe = calcular_gramos(tgt_fe, 6.0, volumen_agua)
 g_kellus_cu = calcular_gramos(tgt_cu, 13.5, volumen_agua)
@@ -113,10 +105,11 @@ g_naturzinc = calcular_gramos(tgt_zn, 13.0, volumen_agua)
 g_naturmanganeso = calcular_gramos(tgt_mn, 12.0, volumen_agua)
 g_molibk = calcular_gramos(tgt_mo, 10.0, volumen_agua)
 
-# El Klip Boro aporta un 3% de K2O colateral
+# El Klip Boro aporta un 3.0% de K2O colateral, lo sumamos primero
 aportes["K2O"] += calcular_ppm(g_klipboro, 3.0, volumen_agua)
 
 # Paso 2. MAGNESIO NETO REQUERIDO
+net_mgo = max(0.0, tgt_mgo - mgo_agua)
 if opcion_mg == "Sulfato de Magnesio":
     g_sulfmg = calcular_gramos(net_mgo, FERTILIZANTES_DB["Sulfato de Magnesio"]["MgO"], volumen_agua)
     pesos_finales["Sulfato de Magnesio"] = g_sulfmg
@@ -129,54 +122,58 @@ else:
     aportes["NO3"] += calcular_ppm(g_nitmg, FERTILIZANTES_DB["Nitrato de Magnesio"]["NO3"], volumen_agua)
 
 # Paso 3. CALCIO NETO REQUERIDO (YaraLiva Calcinit)
+net_cao = max(0.0, tgt_cao - cao_agua)
 g_calcinit = calcular_gramos(net_cao, FERTILIZANTES_DB["YaraLiva CALCINIT"]["CaO"], volumen_agua)
 pesos_finales["YaraLiva CALCINIT"] = g_calcinit
 aportes["CaO"] += net_cao
 aportes["NO3"] += calcular_ppm(g_calcinit, FERTILIZANTES_DB["YaraLiva CALCINIT"]["NO3"], volumen_agua)
 aportes["NH4"] += calcular_ppm(g_calcinit, FERTILIZANTES_DB["YaraLiva CALCINIT"]["NH4"], volumen_agua)
 
-# Paso 4. FÓRMULA NPK COMERCIAL COMPLEJA
+# Paso 4. PRIORIDAD ABSOLUTA DE POTASIO (K₂O): CÁLCULO DE LA FUENTE DE K
+k2o_necesario_neto = max(0.0, tgt_k2o - aportes["K2O"])
+
 if opcion_npk != "Ninguno (Usar Simples)":
+    # Si eliges un NPK complejo, este cubre el Potasio restante
     db_npk = FERTILIZANTES_DB[opcion_npk]
-    k2o_disp = max(0.0, tgt_k2o - aportes["K2O"])
-    g_por_p = calcular_gramos(net_p2o5, db_npk["P2O5"], volumen_agua) if db_npk["P2O5"] > 0 else 999999
-    g_por_k = calcular_gramos(k2o_disp, db_npk["K2O"], volumen_agua) if db_npk["K2O"] > 0 else 999999
-    
-    g_npk_aplicar = min(g_por_p, g_por_k)
+    g_npk_aplicar = calcular_gramos(k2o_necesario_neto, db_npk["K2O"], volumen_agua)
     pesos_finales[opcion_npk] = g_npk_aplicar
     
     for elem in ["NO3", "NH4", "P2O5", "K2O", "SO3"]:
         aportes[elem] += calcular_ppm(g_npk_aplicar, db_npk[elem], volumen_agua)
-
-# Paso 5. POTASIO COMPLEMENTARIO SIMPLE
-k2o_restante = max(0.0, tgt_k2o - aportes["K2O"])
-if k2o_restante > 0:
+else:
+    # Si no usas complejos, usas la Fuente Simple de K seleccionada (Solupotasse o Haifa DKP)
     db_k = FERTILIZANTES_DB[opcion_k]
-    if opcion_k == "Haifa DKP (0-41-54)":
-        p2o5_disp = max(0.0, tgt_p2o5 - aportes["P2O5"])
-        g_por_k_dkp = calcular_gramos(k2o_restante, db_k["K2O"], volumen_agua)
-        g_por_p_dkp = calcular_gramos(p2o5_disp, db_k["P2O5"], volumen_agua) if db_k["P2O5"] > 0 else 999999
-        g_k_aplicar = min(g_por_k_dkp, g_por_p_dkp)
-    else:
-        g_k_aplicar = calcular_gramos(k2o_restante, db_k["K2O"], volumen_agua)
-        
+    g_k_aplicar = calcular_gramos(k2o_necesario_neto, db_k["K2O"], volumen_agua)
     pesos_finales[opcion_k] = g_k_aplicar
-    aportes["K2O"] += calcular_ppm(g_k_aplicar, db_k["K2O"], volumen_agua)
+    
+    aportes["K2O"] += k2o_necesario_neto
     aportes["SO3"] += calcular_ppm(g_k_aplicar, db_k["SO3"], volumen_agua)
     if opcion_k == "Haifa DKP (0-41-54)":
+        # El DKP arrastra fósforo colateral
         aportes["P2O5"] += calcular_ppm(g_k_aplicar, db_k["P2O5"], volumen_agua)
 
-# Paso 6. FÓSFORO COMPLEMENTARIO SIMPLE (MKP)
+# Paso 5. FÓSFORO COMPLEMENTARIO (MKP) -> Cubre estrictamente lo que falte tras el NPK o DKP
 p2o5_restante = max(0.0, tgt_p2o5 - aportes["P2O5"])
 if p2o5_restante > 0:
     g_mkp = calcular_gramos(p2o5_restante, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["P2O5"], volumen_agua)
     pesos_finales["Fosfato Monopotásico (MKP)"] = g_mkp
     aportes["P2O5"] += p2o5_restante
+    # El MKP aporta Potasio colateral (34%), lo sumamos como excedente aceptado si ocurre
     aportes["K2O"] += calcular_ppm(g_mkp, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["K2O"], volumen_agua)
 
-# Paso 7. COMPENSACIÓN FINAL DE NITRÓGENO (Nitrato de Amonio)
+# Paso 6. COMPENSACIÓN CONTROLADA DE NITRÓGENO FINAL (Nitrato de Amonio)
 no3_faltante = max(0.0, tgt_no3 - aportes["NO3"])
 nh4_faltante = max(0.0, tgt_nh4 - aportes["NH4"])
 n_compensar = max(no3_faltante, nh4_faltante)
 
 if n_compensar > 0:
+    g_nit_amonio = calcular_gramos(n_compensar, FERTILIZANTES_DB["Nitrato de Amonio"]["NO3"], volumen_agua)
+    pesos_finales["Nitrato de Amonio"] = g_nit_amonio
+    aportes["NO3"] += calcular_ppm(g_nit_amonio, FERTILIZANTES_DB["Nitrato de Amonio"]["NO3"], volumen_agua)
+    aportes["NH4"] += calcular_ppm(g_nit_amonio, FERTILIZANTES_DB["Nitrato de Amonio"]["NH4"], volumen_agua)
+
+# ==========================================
+# VISUALIZACIÓN: MATRIZ DE AUDITORÍA
+# ==========================================
+st.markdown("---")
+
