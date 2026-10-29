@@ -16,14 +16,7 @@ RIQUEZAS = {
     "Fosfato Monopotásico (MKP)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 52.0, "K2O": 34.0, "MgO": 0.0, "SO3": 0.0},
     "Van Iperen Magboro": {"CaO": 0.0, "NO3": 10.8, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 15.5, "SO3": 0.0},
     "Sulfato de Magnesio (Sulmag)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 16.4, "SO3": 0.0},
-    "Nitrato de Amonio": {"CaO": 0.0, "NO3": 17.0, "NH4": 17.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
-    # Menores Sólidos Daymsa
-    "Naturquel Fe": 6.0,
-    "Klip Boro": 20.5,
-    "Kellus Cu": 13.5,
-    "Naturzinc": 13.0,
-    "Naturmanganeso": 12.0,
-    "Molibk": 10.0
+    "Nitrato de Amonio": {"CaO": 0.0, "NO3": 17.0, "NH4": 17.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0}
 }
 
 # Modificador para el cálculo del Sulmag sólido peso/peso
@@ -85,26 +78,32 @@ with col4:
 # ==========================================
 logrado = {"NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0}
 
-# Conversión de ingresos Kg a gramos para la fórmula
-f_gramos = {
-    "YaraLiva CALCINIT": kg_calcinit * 1000,
-    "Poly-Feed Pony (13-3-43)": kg_pony * 1000,
-    "Haifa DKP (0-41-54)": kg_dkp * 1000,
-    "Sulfato de Potasio (Solupotasse)": kg_soluk * 1000,
-    "Fosfato Monopotásico (MKP)": kg_mkp * 1000,
-    "Van Iperen Magboro": kg_magboro * 1000,
-    "Sulfato de Magnesio (Sulmag)": kg_sulfmg * 1000,
-    "Nitrato de Amonio": kg_nitamonio * 1000,
-}
+# Conversión directa e individual para asegurar la suma matemática exacta
+logrado["CaO"] += calcular_ppm_manual(kg_calcinit * 1000, RIQUEZAS["YaraLiva CALCINIT"]["CaO"], volumen_agua)
+logrado["NO3"] += calcular_ppm_manual(kg_calcinit * 1000, RIQUEZAS["YaraLiva CALCINIT"]["NO3"], volumen_agua)
+logrado["NH4"] += calcular_ppm_manual(kg_calcinit * 1000, RIQUEZAS["YaraLiva CALCINIT"]["NH4"], volumen_agua)
 
-# Acumulación de Macros con lectura garantizada elemento por elemento
-for fert, gramos in f_gramos.items():
-    for elem, riqueza in RIQUEZAS[fert].items():
-        if elem in logrado:
-            logrado[elem] += calcular_ppm_manual(gramos, riqueza, volumen_agua)
+logrado["NO3"] += calcular_ppm_manual(kg_pony * 1000, RIQUEZAS["Poly-Feed Pony (13-3-43)"]["NO3"], volumen_agua)
+logrado["P2O5"] += calcular_ppm_manual(kg_pony * 1000, RIQUEZAS["Poly-Feed Pony (13-3-43)"]["P2O5"], volumen_agua)
+logrado["K2O"] += calcular_ppm_manual(kg_pony * 1000, RIQUEZAS["Poly-Feed Pony (13-3-43)"]["K2O"], volumen_agua)
 
-# Aporte de Azufre (S puro) exclusivo del Sulmag sólido
-ppm_s_sulmag = calcular_ppm_manual(f_gramos["Sulfato de Magnesio (Sulmag)"], S_SULMAG, volumen_agua)
+logrado["P2O5"] += calcular_ppm_manual(kg_dkp * 1000, RIQUEZAS["Haifa DKP (0-41-54)"]["P2O5"], volumen_agua)
+logrado["K2O"] += calcular_ppm_manual(kg_dkp * 1000, RIQUEZAS["Haifa DKP (0-41-54)"]["K2O"], volumen_agua)
+
+logrado["K2O"] += calcular_ppm_manual(kg_soluk * 1000, RIQUEZAS["Sulfato de Potasio (Solupotasse)"]["K2O"], volumen_agua)
+logrado["SO3"] += calcular_ppm_manual(kg_soluk * 1000, RIQUEZAS["Sulfato de Potasio (Solupotasse)"]["SO3"], volumen_agua)
+
+logrado["P2O5"] += calcular_ppm_manual(kg_mkp * 1000, RIQUEZAS["Fosfato Monopotásico (MKP)"]["P2O5"], volumen_agua)
+logrado["K2O"] += calcular_ppm_manual(kg_mkp * 1000, RIQUEZAS["Fosfato Monopotásico (MKP)"]["K2O"], volumen_agua)
+
+logrado["MgO"] += calcular_ppm_manual(kg_magboro * 1000, RIQUEZAS["Van Iperen Magboro"]["MgO"], volumen_agua)
+logrado["NO3"] += calcular_ppm_manual(kg_magboro * 1000, RIQUEZAS["Van Iperen Magboro"]["NO3"], volumen_agua)
+
+logrado["MgO"] += calcular_ppm_manual(kg_sulfmg * 1000, RIQUEZAS["Sulfato de Magnesio (Sulmag)"]["MgO"], volumen_agua)
+ppm_s_sulmag = calcular_ppm_manual(kg_sulfmg * 1000, S_SULMAG, volumen_agua)
+
+logrado["NO3"] += calcular_ppm_manual(kg_nitamonio * 1000, RIQUEZAS["Nitrato de Amonio"]["NO3"], volumen_agua)
+logrado["NH4"] += calcular_ppm_manual(kg_nitamonio * 1000, RIQUEZAS["Nitrato de Amonio"]["NH4"], volumen_agua)
 
 # Aportes colaterales fijos de Potasio (3%) en los menores Klip Boro y Molibk
 logrado["K2O"] += calcular_ppm_manual(g_b, 3.0, volumen_agua)
