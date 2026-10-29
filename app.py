@@ -12,7 +12,6 @@ PCT_CU = 13.5
 PCT_ZN = 13.0
 PCT_MN = 12.0
 PCT_MO = 10.0
-S_SULMAG = 13.0
 
 # ==========================================
 # BARRA LATERAL: CONTROL DE AGUA Y DOSIS MANUALES
@@ -39,9 +38,38 @@ g_mn = st.sidebar.number_input("Naturmanganeso (g):", min_value=0.0, value=348.8
 g_mo = st.sidebar.number_input("Molibk (g):", min_value=0.0, value=2.8, step=0.5)
 
 # ==========================================
-# PANEL CENTRAL: REQUERIMIENTOS OBJETIVO
+# PANEL CENTRAL PASO 1: EDITAR MARBETES
 # ==========================================
-st.header("🎯 Tus Metas Teóricas (PPM)")
+st.header("📦 1. Configurar Riquezas Reales de tus Sacos (% de Etiqueta)")
+c_m1, c_m2, c_m3 = st.columns(3)
+with c_m1:
+    pct_no3_calcinit = st.number_input("% NO₃⁻ en CALCINIT:", value=14.4)
+    pct_nh4_calcinit = st.number_input("% NH₄⁺ en CALCINIT:", value=1.1)
+    pct_cao_calcinit = st.number_input("% CaO en CALCINIT:", value=26.0)
+with c_m2:
+    pct_no3_pony = st.number_input("% NO₃⁻ en Poly-Feed Pony:", value=13.0)
+    pct_p2o5_pony = st.number_input("% P₂O₅ en Poly-Feed Pony:", value=3.0)
+    pct_k2o_pony = st.number_input("% K₂O en Poly-Feed Pony:", value=43.0)
+with c_m3:
+    pct_no3_magboro = st.number_input("% NO₃⁻ en Magboro:", value=10.8)
+    pct_mgo_magboro = st.number_input("% MgO en Magboro:", value=15.5)
+
+pct_p2o5_dkp = 41.0
+pct_k2o_dkp = 54.0
+pct_k2o_soluk = 50.0
+pct_so3_soluk = 18.0
+pct_p2o5_mkp = 52.0
+pct_k2o_mkp = 34.0
+pct_mgo_sulfmg = 16.4
+pct_s_sulmag = 13.0
+pct_no3_amonio = 17.0
+pct_nh4_amonio = 17.0
+
+# ==========================================
+# PANEL CENTRAL PASO 2: METAS MODIFICABLES
+# ==========================================
+st.markdown("---")
+st.header("🎯 2. Tus Metas Teóricas Requeridas (PPM)")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     tgt_no3 = st.number_input("Meta Nitrato (NO₃⁻):", value=133.6, step=1.0)
@@ -59,6 +87,7 @@ with col4:
     tgt_b = st.number_input("Meta Boro (B):", value=0.64, step=0.1)
     tgt_cu = st.number_input("Meta Cobre (Cu):", value=0.54, step=0.1)
     tgt_mo = st.number_input("Meta Molibdeno (Mo):", value=0.0107, format="%.4f")
+    tgt_so3 = st.number_input("Meta Azufre (SO₃):", value=45.0, step=1.0)
 
 # ==========================================
 # CÁLCULO DE CONVERSIÓN CON TU METODOLOGÍA DIRECTA DE CAMPO
@@ -71,34 +100,36 @@ def calcular_ppm_campo(kg_fert, pct_elemento):
     return ((kg_fert * 1000.0) * pct_elemento) / denominador_agua
 
 # Calcio, Fósforo, Potasio y Magnesio se mantienen con la fórmula estándar
-ppm_cao_calcinit = calcular_ppm_campo(kg_calcinit, 26.0)
-ppm_p2o5_pony = calcular_ppm_campo(kg_pony, 3.0)
-ppm_k2o_pony = calcular_ppm_campo(kg_pony, 43.0)
-ppm_p2o5_dkp = calcular_ppm_campo(kg_dkp, 41.0)
-ppm_k2o_dkp = calcular_ppm_campo(kg_dkp, 54.0)
-ppm_k2o_soluk = calcular_ppm_campo(kg_soluk, 50.0)
-ppm_so3_soluk = calcular_ppm_campo(kg_soluk, 18.0)
-ppm_p2o5_mkp = calcular_ppm_campo(kg_mkp, 52.0)
-ppm_k2o_mkp = calcular_ppm_campo(kg_mkp, 34.0)
-ppm_mgo_magboro = calcular_ppm_campo(kg_magboro, 15.5)
-ppm_mgo_sulfmg = calcular_ppm_campo(kg_sulfmg, 16.4)
-ppm_s_sulmag = calcular_ppm_campo(kg_sulfmg, S_SULMAG)
+ppm_cao_calcinit = calcular_ppm_campo(kg_calcinit, pct_cao_calcinit)
+ppm_p2o5_pony = calcular_ppm_campo(kg_pony, pct_p2o5_pony)
+ppm_k2o_pony = calcular_ppm_campo(kg_pony, pct_k2o_pony)
+ppm_p2o5_dkp = calcular_ppm_campo(kg_dkp, pct_p2o5_dkp)
+ppm_k2o_dkp = calcular_ppm_campo(kg_dkp, pct_k2o_dkp)
+ppm_k2o_soluk = calcular_ppm_campo(kg_soluk, pct_k2o_soluk)
+ppm_p2o5_mkp = calcular_ppm_campo(kg_mkp, pct_p2o5_mkp)
+ppm_k2o_mkp = calcular_ppm_campo(kg_mkp, pct_k2o_mkp)
+ppm_mgo_magboro = calcular_ppm_campo(kg_magboro, pct_mgo_magboro)
+ppm_mgo_sulfmg = calcular_ppm_campo(kg_sulfmg, pct_mgo_sulfmg)
 
-# 🚨 CALIBRACIÓN DEL NITRÓGENO NÍTRICO (Clonación exacta de tus hojas de apuntes)
-# Multiplica directamente los gramos resultantes para que el acumulado dé 197.3 PPM
-ppm_no3_calcinit = (kg_calcinit * 1000.0 * 14.4) / (2600.0 / (197.3 / 72.2))
-ppm_no3_pony = (kg_pony * 1000.0 * 13.0) / (2600.0 / (197.3 / 72.2))
-ppm_no3_magboro = (kg_magboro * 1000.0 * 10.8) / (2600.0 / (197.3 / 72.2))
-ppm_no3_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
+# Cálculo unificado de Azufre (Ambas fuentes se leen como SO₃)
+ppm_so3_soluk = calcular_ppm_campo(kg_soluk, pct_so3_soluk)
+ppm_so3_sulfmg = calcular_ppm_campo(kg_sulfmg, pct_s_sulmag) # 13% de SO₃ en tu libreta
+total_so3 = ppm_so3_soluk + ppm_so3_sulfmg
 
-ppm_nh4_calcinit = calcular_ppm_campo(kg_calcinit, 1.1)
-ppm_nh4_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
+# Nitrógeno Nítrico calibrado con tus factores de libreta
+ppm_no3_calcinit = (kg_calcinit * 1000.0 * pct_no3_calcinit) / (2600.0 / (197.3 / 72.2))
+ppm_no3_pony = (kg_pony * 1000.0 * pct_no3_pony) / (2600.0 / (197.3 / 72.2))
+ppm_no3_magboro = (kg_magboro * 1000.0 * pct_no3_magboro) / (2600.0 / (197.3 / 72.2))
+ppm_no3_nitamonio = calcular_ppm_campo(kg_nitamonio, pct_no3_amonio)
+
+ppm_nh4_calcinit = calcular_ppm_campo(kg_calcinit, pct_nh4_calcinit)
+ppm_nh4_nitamonio = calcular_ppm_campo(kg_nitamonio, pct_nh4_amonio)
 
 # Aportes colaterales de Potasio (3%) en los gramos de Klip Boro y Molibk
 ppm_k2o_boro_menor = (g_b * 3.0) / denominador_agua
 ppm_k2o_molibk_menor = (g_mo * 3.0) / denominador_agua
 
-# SUMATORIAS AGREGADAS TOTALES
+# SUMATORIAS AGREGADAS TOTALES CONSOLIDADAS
 total_no3 = ppm_no3_calcinit + ppm_no3_pony + ppm_no3_magboro + ppm_no3_nitamonio
 total_nh4 = ppm_nh4_calcinit + ppm_nh4_nitamonio
 total_cao = ppm_cao_calcinit
@@ -118,7 +149,7 @@ ppm_mo = (g_mo * PCT_MO) / denominador_agua
 # MATRIZ VISUAL DE CONTROL DINÁMICO
 # ==========================================
 st.markdown("---")
-st.header("📋 Matriz de Auditoría y Verificación de Excesos (PPM Reales)")
+st.header("📋 3. Matriz de Auditoría y Verificación de Excesos (PPM Reales)")
 st.write("Modifica los requerimientos arriba o las dosis a la izquierda para balancear tu receta al instante:")
 
 st.write(f"**Nitrógeno Nitratado (NO₃⁻):** Logrado: `{total_no3:.1f}` / Meta: `{tgt_no3:.1f}` PPM")
@@ -127,7 +158,7 @@ st.write(f"**Calcio (CaO):** Logrado: `{total_cao:.1f}` / Meta: `{tgt_cao:.1f}` 
 st.write(f"**Fósforo (P₂O₅):** Logrado: `{total_p2o5:.1f}` / Meta: `{tgt_p2o5:.1f}` PPM")
 st.write(f"**Potasio (K₂O):** Logrado: `{total_k2o:.1f}` / Meta: `{tgt_k2o:.1f}` PPM")
 st.write(f"**Magnesio (MgO):** Logrado: `{total_mgo:.1f}` / Meta: `{tgt_mgo:.1f}` PPM")
-st.write(f"**Azufre Solupotasse (SO₃):** `{ppm_so3_soluk:.1f}` PPM | **Azufre Sulmag (S puro):** `{ppm_s_sulmag:.1f}` PPM")
+st.write(f"**Azufre Total Logrado (SO₃):** Logrado: `{total_so3:.1f}` / Meta: `{tgt_so3:.1f}` PPM")
 
 st.markdown("#### Balance de Elementos Menores Logrado:")
 st.write(f"• **Hierro (Fe):** Logrado: `{ppm_fe:.2f}` / Meta: `{tgt_fe:.2f}` PPM")
