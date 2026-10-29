@@ -6,7 +6,7 @@ st.title("🌱 Simulador Manual de Fertirriego Avanzado")
 st.write("Escribe libremente tanto tus metas objetivo de PPM como los Kilogramos y Gramos para cuadrar los requerimientos a tu acomodo.")
 
 # ==========================================
-# BASE DE DATOS DE RIQUEZAS DE BODEGA
+# BASE DE DATOS DE RIQUEZAS DE BODEGA (Claves unificadas para NO3 y NH4)
 # ==========================================
 RIQUEZAS = {
     "YaraLiva CALCINIT": {"CaO": 26.0, "NO3": 14.4, "NH4": 1.1, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
@@ -15,7 +15,7 @@ RIQUEZAS = {
     "Sulfato de Potasio (Solupotasse)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 50.0, "MgO": 0.0, "SO3": 18.0},
     "Fosfato Monopotásico (MKP)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 52.0, "K2O": 34.0, "MgO": 0.0, "SO3": 0.0},
     "Van Iperen Magboro": {"CaO": 0.0, "NO3": 10.8, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 15.5, "SO3": 0.0},
-    "Sulfato de Magnesio (Sulmag)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 16.4, "S_puro": 13.0, "SO3": 0.0},
+    "Sulfato de Magnesio (Sulmag)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 16.4, "SO3": 0.0},
     "Nitrato de Amonio": {"CaO": 0.0, "NO3": 17.0, "NH4": 17.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
     # Menores Sólidos Daymsa
     "Naturquel Fe": 6.0,
@@ -25,6 +25,9 @@ RIQUEZAS = {
     "Naturmanganeso": 12.0,
     "Molibk": 10.0
 }
+
+# Modificador para el cálculo del Sulmag sólido peso/peso
+S_SULMAG = 13.0
 
 def calcular_ppm_manual(gramos, riqueza, volumen):
     if volumen <= 0 or gramos <= 0:
@@ -80,7 +83,7 @@ with col4:
 # ==========================================
 # CÁLCULO DE PPM LOGRADAS EN TIEMPO REAL
 # ==========================================
-logrado = {"NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0, "S_puro": 0.0}
+logrado = {"NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0}
 
 # Conversión de ingresos Kg a gramos para la fórmula
 f_gramos = {
@@ -94,11 +97,14 @@ f_gramos = {
     "Nitrato de Amonio": kg_nitamonio * 1000,
 }
 
-# Acumulación de Macros
+# Acumulación de Macros con lectura unificada de Nitrógeno
 for fert, gramos in f_gramos.items():
     for elem, riqueza in RIQUEZAS[fert].items():
         if elem in logrado:
             logrado[elem] += calcular_ppm_manual(gramos, riqueza, volumen_agua)
+
+# Aporte de Azufre (S puro) exclusivo del Sulmag sólido
+ppm_s_sulmag = calcular_ppm_manual(f_gramos["Sulfato de Magnesio (Sulmag)"], S_SULMAG, volumen_agua)
 
 # Aportes colaterales fijos de Potasio (3%) en los menores Klip Boro y Molibk
 logrado["K2O"] += calcular_ppm_manual(g_b, 3.0, volumen_agua)
@@ -125,7 +131,7 @@ st.write(f"**Calcio (CaO):** Logrado: `{logrado['CaO']:.1f}` / Meta: `{tgt_cao:.
 st.write(f"**Fósforo (P₂O₅):** Logrado: `{logrado['P2O5']:.1f}` / Meta: `{tgt_p2o5:.1f}` PPM")
 st.write(f"**Potasio (K₂O):** Logrado: `{logrado['K2O']:.1f}` / Meta: `{tgt_k2o:.1f}` PPM")
 st.write(f"**Magnesio (MgO):** Logrado: `{logrado['MgO']:.1f}` / Meta: `{tgt_mgo:.1f}` PPM")
-st.write(f"**Azufre Solupotasse (SO₃):** `{logrado['SO3']:.1f}` PPM | **Azufre Sulmag (S puro):** `{logrado['S_puro']:.1f}` PPM")
+st.write(f"**Azufre Solupotasse (SO₃):** `{logrado['SO3']:.1f}` PPM | **Azufre Sulmag (S puro):** `{ppm_s_sulmag:.1f}` PPM")
 
 st.markdown("#### Balance de Elementos Menores Logrado:")
 st.write(f"• **Hierro (Fe):** Logrado: `{ppm_fe:.2f}` / Meta: `{tgt_fe:.2f}` PPM")
