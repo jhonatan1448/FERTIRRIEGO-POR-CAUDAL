@@ -80,7 +80,7 @@ kg_magboro = st.sidebar.number_input("Van Iperen Magboro (Kg):", min_value=0.0, 
 kg_sulfmg = st.sidebar.number_input("Sulfato de Magnesio Sulmag (Kg):", min_value=0.0, value=3.17, step=0.1)
 kg_nitamonio = st.sidebar.number_input("Nitrato de Amonio (Kg):", min_value=0.0, value=0.00, step=0.1)
 
-# Renderizado dinámico exclusivo para los productos nuevos añadidos por el usuario
+# Renderizado dinámico para productos nuevos
 pesos_nuevos = {}
 if st.session_state.nuevos_fertilizantes:
     st.sidebar.markdown("---")
@@ -121,14 +121,14 @@ with col4:
     tgt_so3 = st.number_input("Meta Azufre (SO₃):", value=45.0, step=1.0)
 
 # ==========================================
-# MATEMÁTICA EN LÍNEA PLANA BASADA EN TU CALCULADORA MANUAL
+# MATEMÁTICA EN LÍNEA PLANA DE TU CALCULADORA MANUAL
 # ==========================================
 def calcular_ppm_campo(kg_fert, pct_elemento):
     if volumen_agua <= 0 or kg_fert <= 0 or pct_elemento <= 0:
         return 0.0
     return ((kg_fert * 1000.0) * pct_elemento) / denominador_agua
 
-# Cálculos de Fuentes Simples y Base Estándar
+# Cálculos de Fuentes Estándar
 ppm_cao_calcinit = calcular_ppm_campo(kg_calcinit, 26.0)
 ppm_p2o5_pony = calcular_ppm_campo(kg_pony, 3.0)
 ppm_k2o_pony = calcular_ppm_campo(kg_pony, 43.0)
@@ -151,11 +151,10 @@ ppm_no3_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
 ppm_nh4_calcinit = calcular_ppm_campo(kg_calcinit, 1.1)
 ppm_nh4_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
 
-# Inicializadores de acumuladores para incorporar los sacos nuevos registrados
+# Acumuladores para marcas nuevas
 extra_no3_crudo, extra_nh4, extra_cao, extra_p2o5, extra_k2o, extra_mgo, extra_so3 = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 extra_fe, extra_mn, extra_zn, extra_cu, extra_b, extra_mo = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-# Suma dinámica de los aportes de las marcas nuevas creadas por el usuario
 for prod_n, kg_n in pesos_nuevos.items():
     if kg_n > 0:
         db_n = st.session_state.nuevos_fertilizantes[prod_n]
@@ -174,5 +173,7 @@ for prod_n, kg_n in pesos_nuevos.items():
         extra_b += calcular_ppm_campo(kg_n, db_n.get("B", 0.0))
         extra_mo += calcular_ppm_campo(kg_n, db_n.get("Mo", 0.0))
 
-# ==========================================
-# CONSOLIDACIÓN Y SUMATORIA TOTAL DE PPM LOGRADAS
+# CONSOLIDACIÓN FINAL
+total_no3 = ppm_no3_calcinit + ppm_no3_pony + ppm_no3_magboro + ppm_no3_nitamonio + (extra_no3_crudo * (197.3 / 72.2))
+total_nh4 = ppm_nh4_calcinit + ppm_nh4_nitamonio + extra_nh4
+total_cao = ppm_cao_calcinit + extra_cao
