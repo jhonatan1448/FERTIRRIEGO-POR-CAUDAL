@@ -128,7 +128,6 @@ aportes["NH4"] += calcular_ppm(g_calcinit, FERTILIZANTES_DB["YaraLiva CALCINIT"]
 # Paso 4. FÓRMULA NPK COMERCIAL COMPLEJA
 if opcion_npk != "Ninguno (Usar Simples)":
     db_npk = FERTILIZANTES_DB[opcion_npk]
-    
     k2o_disp = max(0.0, tgt_k2o - aportes["K2O"])
     g_por_p = calcular_gramos(tgt_p2o5, db_npk["P2O5"], volumen_agua) if db_npk["P2O5"] > 0 else 999999
     g_por_k = calcular_gramos(k2o_disp, db_npk["K2O"], volumen_agua) if db_npk["K2O"] > 0 else 999999
@@ -189,3 +188,4 @@ tabla_data = {
         "🎯 Óptimo" if aportes["NO3"] <= tgt_no3 + 1 else "⚠️ EXCESO COMPENSADO",
         "🎯 Óptimo" if aportes["NH4"] <= tgt_nh4 + 1 else "⚠️ EXCESO COMPENSADO",
         "🎯 Óptimo" if aportes["CaO"] <= tgt_cao + 1 else "⚠️ EXCESO COMPENSADO",
+        "🎯 Óptimo" if aportes["P2O5"] <= tgt_p2o5 + 1 else "⚠️ EXCESO COMPENSADO",
