@@ -2,8 +2,8 @@ import streamlit as st
 
 st.set_page_config(page_title="Simulador de Fertirriego Colombia Pro", page_icon="🌱", layout="wide")
 
-st.title("🌱 Simulador Manual de Fertirriego Avanzado con Inventario Editable Completo")
-st.write("Escribe tus metas, ajusta los kilos o añade fertilizantes nuevos (Macros y Micros) a tu bodega. El sistema recordará tus cambios en tiempo real.")
+st.title("🌱 Simulador Manual de Fertirriego Avanzado")
+st.write("Ajusta tus metas de PPM o los Kilogramos/Gramos a la izquierda para balancear tu receta al instante.")
 
 # ==========================================
 # REGLA DE MEMORIA: INICIALIZAR LA BODEGA DE FERTILIZANTES
@@ -20,14 +20,9 @@ if "bodega" not in st.session_state:
         "Nitrato de Amonio": {"CaO": 0.0, "NO3": 17.0, "NH4": 17.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0, "Fe": 0.0, "Mn": 0.0, "Zn": 0.0, "Cu": 0.0, "B": 0.0, "Mo": 0.0}
     }
 
-# Riquezas de tus fuentes puras de menores actuales (Sólidos quelatados Daymsa)
+# Riquezas de tus menores puros Daymsa
 RIQUEZAS_MINORES_PUROS = {
-    "Naturquel Fe": 6.0,
-    "Klip Boro": 20.5,
-    "Kellus Cu": 13.5,
-    "Naturzinc": 13.0,
-    "Naturmanganeso": 12.0,
-    "Molibk": 10.0
+    "Naturquel Fe": 6.0, "Klip Boro": 20.5, "Kellus Cu": 13.5, "Naturzinc": 13.0, "Naturmanganeso": 12.0, "Molibk": 10.0
 }
 
 # ==========================================
@@ -69,9 +64,9 @@ with st.expander("➕ Haz clic aquí para registrar una marca o mezcla nueva en 
                 "CaO": n_cao, "NO3": n_no3, "NH4": n_nh4, "P2O5": n_p2o5, "K2O": n_k2o, "MgO": n_mgo, "SO3": n_so3,
                 "Fe": n_fe, "Mn": n_mn, "Zn": n_zn, "Cu": n_cu, "B": n_b, "Mo": n_mo
             }
-            st.success(f"✅ ¡{nombre_nuevo} se ha guardado con éxito con su perfil completo! Ya puedes asignarle kilos a la izquierda.")
+            st.success(f"✅ ¡{nombre_nuevo} guardado! Ya puedes asignarle kilos a la izquierda.")
         else:
-            st.error("⚠️ Por favor escribe un nombre válido antes de guardar.")
+            st.error("⚠️ Nombre inválido.")
 
 # ==========================================
 # BARRA LATERAL: CONTROL DE AGUA Y DOSIS GENERALES
@@ -83,7 +78,6 @@ denominador_agua = volumen_agua * 0.1
 st.sidebar.header("⚖️ Control de Dosificación Manual (Kg)")
 pesos_ingresados = {}
 
-# Genera dinámicamente casillas para cada fertilizante registrado en la memoria
 for producto in st.session_state.bodega.keys():
     valor_inicial = 0.0
     if producto == "YaraLiva CALCINIT": valor_inicial = 5.10
@@ -154,9 +148,12 @@ for producto, kg in pesos_ingresados.items():
         logrado["B"] += (gramos * f_db.get("B", 0.0)) / denominador_agua
         logrado["Mo"] += (gramos * f_db.get("Mo", 0.0)) / denominador_agua
 
-# Calibración milimétrica para tu nitrógeno de amarre de libreta
+# Calibración milimétrica nitrógeno de amarre de libreta
 total_no3 = logrado["NO3_crudo"] * (197.3 / 72.2)
 
-# Aportes colaterales de Potasio (3%) en los gramos de Klip Boro y Molibk puros
+# Aportes colaterales fijos de Potasio (3%) en los gramos de Klip Boro y Molibk puros
 total_k2o = logrado["K2O"] + ((g_b * 3.0) / denominador_agua) + ((g_mo * 3.0) / denominador_agua)
 
+# Suma final combinada (Fuentes puras de Daymsa + mezclas comerciales)
+total_fe = logrado["Fe"] + ((g_fe * RIQUEZAS_MINORES_PUROS["Naturquel Fe"]) / denominador_agua)
+total_b = logrado["B"] + ((g_b * RIQUEZAS_MINORES_PUROS["Klip Boro"]) / denominador_agua)
