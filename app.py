@@ -180,4 +180,3 @@ nh4_faltante = max(0.0, tgt_nh4 - aportes["NH4"])
 n_compensar = max(no3_faltante, nh4_faltante)
 
 if n_compensar > 0:
-
