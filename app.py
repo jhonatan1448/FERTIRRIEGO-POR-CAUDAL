@@ -2,32 +2,78 @@ import streamlit as st
 
 st.set_page_config(page_title="Simulador de Fertirriego Colombia", page_icon="🌱", layout="wide")
 
-st.title("🌱 Simulador Manual de Fertirriego Avanzado")
-st.write("Escribe libremente tanto tus metas objetivo de PPM como los Kilogramos y Gramos para cuadrar los requerimientos a tu acomodo.")
-
-# Porcentajes de Menores Sólidos Daymsa
-PCT_FE = 6.0
-PCT_B = 20.5
-PCT_CU = 13.5
-PCT_ZN = 13.0
-PCT_MN = 12.0
-PCT_MO = 10.0
+st.title("🌱 Simulador Manual de Fertirriego Avanzado con Inventario Editable")
+st.write("Escribe tus metas, ajusta los kilos o añade fertilizantes nuevos a tu bodega. El sistema recordará tus cambios en tiempo real.")
 
 # ==========================================
-# BARRA LATERAL: CONTROL DE AGUA Y DOSIS MANUALES
+# REGLA DE MEMORIA: INICIALIZAR LA BODEGA DE FERTILIZANTES
+# ==========================================
+if "bodega" not in st.session_state:
+    st.session_state.bodega = {
+        "YaraLiva CALCINIT": {"CaO": 26.0, "NO3": 14.4, "NH4": 1.1, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
+        "Poly-Feed Pony (13-3-43)": {"CaO": 0.0, "NO3": 13.0, "NH4": 0.0, "P2O5": 3.0, "K2O": 43.0, "MgO": 0.0, "SO3": 0.0},
+        "Haifa DKP (0-41-54)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 41.0, "K2O": 54.0, "MgO": 0.0, "SO3": 0.0},
+        "Sulfato de Potasio (Solupotasse)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 50.0, "MgO": 0.0, "SO3": 18.0},
+        "Fosfato Monopotásico (MKP)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 52.0, "K2O": 34.0, "MgO": 0.0, "SO3": 0.0},
+        "Van Iperen Magboro": {"CaO": 0.0, "NO3": 10.8, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 15.5, "SO3": 0.0},
+        "Sulfato de Magnesio (Sulmag)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 16.4, "SO3": 13.0},
+        "Nitrato de Amonio": {"CaO": 0.0, "NO3": 17.0, "NH4": 17.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0}
+    }
+
+# Variables fijas de menores Daymsa
+PCT_FE, PCT_B, PCT_CU, PCT_ZN, PCT_MN, PCT_MO = 6.0, 20.5, 13.5, 13.0, 12.0, 10.0
+
+# ==========================================
+# FORMULARIO CENTRAL: AÑADIR NUEVOS ELEMENTOS A BODEGA
+# ==========================================
+st.header("📦 Creación y Registro de Nuevos Fertilizantes")
+with st.expander("➕ Haz clic aquí para registrar una marca o mezcla nueva en tu inventario"):
+    nombre_nuevo = st.text_input("Nombre Comercial del Fertilizante:", placeholder="Ej: Master 15-5-30, Fertisolo, etc.")
+    
+    col_n1, col_n2, col_n3, col_n4 = st.columns(4)
+    with col_n1:
+        n_no3 = st.number_input("% Nitrato (NO₃⁻) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0)
+        n_nh4 = st.number_input("% Amonio (NH₄⁺) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0)
+    with col_n2:
+        n_p2o5 = st.number_input("% Fósforo (P₂O₅) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0)
+        n_k2o = st.number_input("% Potasio (K₂O) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0)
+    with col_n3:
+        n_cao = st.number_input("% Calcio (CaO) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0)
+        n_mgo = st.number_input("% Magnesio (MgO) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0)
+    with col_n4:
+        n_so3 = st.number_input("% Azufre (SO₃) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0)
+        
+    if st.button("💾 Guardar e Incorporar a la Barra Lateral"):
+        if nombre_nuevo:
+            st.session_state.bodega[nombre_nuevo] = {
+                "CaO": n_cao, "NO3": n_no3, "NH4": n_nh4, "P2O5": n_p2o5, "K2O": n_k2o, "MgO": n_mgo, "SO3": n_so3
+            }
+            st.success(f"✅ ¡{nombre_nuevo} se ha guardado con éxito! Ya puedes asignarle kilos a la izquierda.")
+        else:
+            st.error("⚠️ Por favor escribe un nombre válido antes de guardar.")
+
+# ==========================================
+# BARRA LATERAL: CONTROL DE AGUA Y DOSIS GENERALES
 # ==========================================
 st.sidebar.header("💧 Volumen de Agua")
 volumen_agua = st.sidebar.number_input("Volumen de agua total (Litros):", min_value=1, value=26000, step=1000)
+denominador_agua = volumen_agua * 0.1
 
-st.sidebar.header("⚖️ Ingresa tus Macronutrientes (En Kilogramos)")
-kg_calcinit = st.sidebar.number_input("YaraLiva CALCINIT (Kg):", min_value=0.0, value=5.10, step=0.1)
-kg_pony = st.sidebar.number_input("Poly-Feed Pony 13-3-43 (Kg):", min_value=0.0, value=5.30, step=0.1)
-kg_dkp = st.sidebar.number_input("Haifa DKP 0-41-54 (Kg):", min_value=0.0, value=4.76, step=0.1)
-kg_soluk = st.sidebar.number_input("Sulfato de Potasio (Kg):", min_value=0.0, value=3.90, step=0.1)
-kg_mkp = st.sidebar.number_input("Fosfato Monopotásico MKP (Kg):", min_value=0.0, value=0.00, step=0.1)
-kg_magboro = st.sidebar.number_input("Van Iperen Magboro (Kg):", min_value=0.0, value=4.19, step=0.1)
-kg_sulfmg = st.sidebar.number_input("Sulfato de Magnesio Sulmag (Kg):", min_value=0.0, value=3.17, step=0.1)
-kg_nitamonio = st.sidebar.number_input("Nitrato de Amonio (Kg):", min_value=0.0, value=0.00, step=0.1)
+st.sidebar.header("⚖️ Control de Dosificación Manual (Kg)")
+pesos_ingresados = {}
+
+# Genera dinámicamente casillas para cada fertilizante registrado en la memoria
+for producto in st.session_state.bodega.keys():
+    # Mantiene los valores por defecto del ejercicio manual anterior
+    valor_inicial = 0.0
+    if producto == "YaraLiva CALCINIT": valor_inicial = 5.10
+    elif producto == "Poly-Feed Pony (13-3-43)": valor_inicial = 5.30
+    elif producto == "Haifa DKP (0-41-54)": valor_inicial = 4.76
+    elif producto == "Sulfato de Potasio (Solupotasse)": valor_inicial = 3.90
+    elif producto == "Van Iperen Magboro": valor_inicial = 4.19
+    elif producto == "Sulfato de Magnesio (Sulmag)": valor_inicial = 3.17
+    
+    pesos_ingresados[producto] = st.sidebar.number_input(f"{producto} (Kg):", min_value=0.0, value=valor_inicial, step=0.1)
 
 st.sidebar.header("🧪 Ingresa tus Micronutrientes (En Gramos)")
 g_fe = st.sidebar.number_input("Naturquel Fe (g):", min_value=0.0, value=1486.3, step=10.0)
@@ -36,34 +82,6 @@ g_cu = st.sidebar.number_input("Kellus Cu (g):", min_value=0.0, value=104.0, ste
 g_zn = st.sidebar.number_input("Naturzinc (g):", min_value=0.0, value=172.0, step=5.0)
 g_mn = st.sidebar.number_input("Naturmanganeso (g):", min_value=0.0, value=348.8, step=10.0)
 g_mo = st.sidebar.number_input("Molibk (g):", min_value=0.0, value=2.8, step=0.5)
-
-# ==========================================
-# PANEL CENTRAL PASO 1: EDITAR MARBETES
-# ==========================================
-st.header("📦 1. Configurar Riquezas Reales de tus Sacos (% de Etiqueta)")
-c_m1, c_m2, c_m3 = st.columns(3)
-with c_m1:
-    pct_no3_calcinit = st.number_input("% NO₃⁻ en CALCINIT:", value=14.4)
-    pct_nh4_calcinit = st.number_input("% NH₄⁺ en CALCINIT:", value=1.1)
-    pct_cao_calcinit = st.number_input("% CaO en CALCINIT:", value=26.0)
-with c_m2:
-    pct_no3_pony = st.number_input("% NO₃⁻ en Poly-Feed Pony:", value=13.0)
-    pct_p2o5_pony = st.number_input("% P₂O₅ en Poly-Feed Pony:", value=3.0)
-    pct_k2o_pony = st.number_input("% K₂O en Poly-Feed Pony:", value=43.0)
-with c_m3:
-    pct_no3_magboro = st.number_input("% NO₃⁻ en Magboro:", value=10.8)
-    pct_mgo_magboro = st.number_input("% MgO en Magboro:", value=15.5)
-
-pct_p2o5_dkp = 41.0
-pct_k2o_dkp = 54.0
-pct_k2o_soluk = 50.0
-pct_so3_soluk = 18.0
-pct_p2o5_mkp = 52.0
-pct_k2o_mkp = 34.0
-pct_mgo_sulfmg = 16.4
-pct_s_sulmag = 13.0
-pct_no3_amonio = 17.0
-pct_nh4_amonio = 17.0
 
 # ==========================================
 # PANEL CENTRAL PASO 2: METAS MODIFICABLES
@@ -90,52 +108,29 @@ with col4:
     tgt_so3 = st.number_input("Meta Azufre (SO₃):", value=45.0, step=1.0)
 
 # ==========================================
-# CÁLCULO DE CONVERSIÓN CON TU METODOLOGÍA DIRECTA DE CAMPO
+# ALGORITMO DINÁMICO DE ACUMULACIÓN DE NUTRIENTES
 # ==========================================
-denominador_agua = volumen_agua * 0.1
+logrado = {"NO3_crudo": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0}
 
-def calcular_ppm_campo(kg_fert, pct_elemento):
-    if volumen_agua <= 0 or kg_fert <= 0 or pct_elemento <= 0:
-        return 0.0
-    return ((kg_fert * 1000.0) * pct_elemento) / denominador_agua
+# Procesamiento plano de la bodega en base a lo digitado en la barra lateral
+for producto, kg in pesos_ingresados.items():
+    gramos = kg * 1000.0
+    if gramos > 0:
+        logrado["CaO"] += (gramos * st.session_state.bodega[producto]["CaO"]) / denominador_agua
+        logrado["P2O5"] += (gramos * st.session_state.bodega[producto]["P2O5"]) / denominador_agua
+        logrado["K2O"] += (gramos * st.session_state.bodega[producto]["K2O"]) / denominador_agua
+        logrado["MgO"] += (gramos * st.session_state.bodega[producto]["MgO"]) / denominador_agua
+        logrado["SO3"] += (gramos * st.session_state.bodega[producto]["SO3"]) / denominador_agua
+        logrado["NH4"] += (gramos * st.session_state.bodega[producto]["NH4"]) / denominador_agua
+        
+        # Guardamos el nitrato crudo para aplicar la calibración lineal de tu libreta abajo
+        logrado["NO3_crudo"] += (gramos * st.session_state.bodega[producto]["NO3"]) / denominador_agua
 
-# Calcio, Fósforo, Potasio y Magnesio se mantienen con la fórmula estándar
-ppm_cao_calcinit = calcular_ppm_campo(kg_calcinit, pct_cao_calcinit)
-ppm_p2o5_pony = calcular_ppm_campo(kg_pony, pct_p2o5_pony)
-ppm_k2o_pony = calcular_ppm_campo(kg_pony, pct_k2o_pony)
-ppm_p2o5_dkp = calcular_ppm_campo(kg_dkp, pct_p2o5_dkp)
-ppm_k2o_dkp = calcular_ppm_campo(kg_dkp, pct_k2o_dkp)
-ppm_k2o_soluk = calcular_ppm_campo(kg_soluk, pct_k2o_soluk)
-ppm_p2o5_mkp = calcular_ppm_campo(kg_mkp, pct_p2o5_mkp)
-ppm_k2o_mkp = calcular_ppm_campo(kg_mkp, pct_k2o_mkp)
-ppm_mgo_magboro = calcular_ppm_campo(kg_magboro, pct_mgo_magboro)
-ppm_mgo_sulfmg = calcular_ppm_campo(kg_sulfmg, pct_mgo_sulfmg)
+# 🚨 CALIBRACIÓN MATEMÁTICA DE TU LIBRETA PARA EL NITRATO DE AMARRE (Factor de conversión exacto)
+total_no3 = logrado["NO3_crudo"] * (197.3 / 72.2)
 
-# Cálculo unificado de Azufre (Ambas fuentes se leen como SO₃)
-ppm_so3_soluk = calcular_ppm_campo(kg_soluk, pct_so3_soluk)
-ppm_so3_sulfmg = calcular_ppm_campo(kg_sulfmg, pct_s_sulmag) # 13% de SO₃ en tu libreta
-total_so3 = ppm_so3_soluk + ppm_so3_sulfmg
-
-# Nitrógeno Nítrico calibrado con tus factores de libreta
-ppm_no3_calcinit = (kg_calcinit * 1000.0 * pct_no3_calcinit) / (2600.0 / (197.3 / 72.2))
-ppm_no3_pony = (kg_pony * 1000.0 * pct_no3_pony) / (2600.0 / (197.3 / 72.2))
-ppm_no3_magboro = (kg_magboro * 1000.0 * pct_no3_magboro) / (2600.0 / (197.3 / 72.2))
-ppm_no3_nitamonio = calcular_ppm_campo(kg_nitamonio, pct_no3_amonio)
-
-ppm_nh4_calcinit = calcular_ppm_campo(kg_calcinit, pct_nh4_calcinit)
-ppm_nh4_nitamonio = calcular_ppm_campo(kg_nitamonio, pct_nh4_amonio)
-
-# Aportes colaterales de Potasio (3%) en los gramos de Klip Boro y Molibk
-ppm_k2o_boro_menor = (g_b * 3.0) / denominador_agua
-ppm_k2o_molibk_menor = (g_mo * 3.0) / denominador_agua
-
-# SUMATORIAS AGREGADAS TOTALES CONSOLIDADAS
-total_no3 = ppm_no3_calcinit + ppm_no3_pony + ppm_no3_magboro + ppm_no3_nitamonio
-total_nh4 = ppm_nh4_calcinit + ppm_nh4_nitamonio
-total_cao = ppm_cao_calcinit
-total_p2o5 = ppm_p2o5_pony + ppm_p2o5_dkp + ppm_p2o5_mkp
-total_k2o = ppm_k2o_pony + ppm_k2o_dkp + ppm_k2o_soluk + ppm_k2o_mkp + ppm_k2o_boro_menor + ppm_k2o_molibk_menor
-total_mgo = ppm_mgo_magboro + ppm_mgo_sulfmg
+# Aportes colaterales fijos de Potasio (3%) en los gramos de Klip Boro y Molibk
+total_k2o = logrado["K2O"] + ((g_b * 3.0) / denominador_agua) + ((g_mo * 3.0) / denominador_agua)
 
 # Menores Sólidos Daymsa
 ppm_fe = (g_fe * PCT_FE) / denominador_agua
@@ -150,15 +145,14 @@ ppm_mo = (g_mo * PCT_MO) / denominador_agua
 # ==========================================
 st.markdown("---")
 st.header("📋 3. Matriz de Auditoría y Verificación de Excesos (PPM Reales)")
-st.write("Modifica los requerimientos arriba o las dosis a la izquierda para balancear tu receta al instante:")
 
 st.write(f"**Nitrógeno Nitratado (NO₃⁻):** Logrado: `{total_no3:.1f}` / Meta: `{tgt_no3:.1f}` PPM")
-st.write(f"**Nitrógeno Amoniacal (NH₄⁺):** Logrado: `{total_nh4:.1f}` / Meta: `{tgt_nh4:.1f}` PPM")
-st.write(f"**Calcio (CaO):** Logrado: `{total_cao:.1f}` / Meta: `{tgt_cao:.1f}` PPM")
-st.write(f"**Fósforo (P₂O₅):** Logrado: `{total_p2o5:.1f}` / Meta: `{tgt_p2o5:.1f}` PPM")
+st.write(f"**Nitrógeno Amoniacal (NH₄⁺):** Logrado: `{logrado['NH4']:.1f}` / Meta: `{tgt_nh4:.1f}` PPM")
+st.write(f"**Calcio (CaO):** Logrado: `{logrado['CaO']:.1f}` / Meta: `{tgt_cao:.1f}` PPM")
+st.write(f"**Fósforo (P₂O₅):** Logrado: `{logrado['P2O5']:.1f}` / Meta: `{tgt_p2o5:.1f}` PPM")
 st.write(f"**Potasio (K₂O):** Logrado: `{total_k2o:.1f}` / Meta: `{tgt_k2o:.1f}` PPM")
-st.write(f"**Magnesio (MgO):** Logrado: `{total_mgo:.1f}` / Meta: `{tgt_mgo:.1f}` PPM")
-st.write(f"**Azufre Total Logrado (SO₃):** Logrado: `{total_so3:.1f}` / Meta: `{tgt_so3:.1f}` PPM")
+st.write(f"**Magnesio (MgO):** Logrado: `{logrado['MgO']:.1f}` / Meta: `{tgt_mgo:.1f}` PPM")
+st.write(f"**Azufre Total Logrado (SO₃):** Logrado: `{logrado['SO3']:.1f}` / Meta: `{tgt_so3:.1f}` PPM")
 
 st.markdown("#### Balance de Elementos Menores Logrado:")
 st.write(f"• **Hierro (Fe):** Logrado: `{ppm_fe:.2f}` / Meta: `{tgt_fe:.2f}` PPM")
