@@ -1,9 +1,9 @@
 import streamlit as st
 
-st.set_page_config(page_title="Simulador de Fertirriego Manual", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="Simulador de Fertirriego Flexible", page_icon="🌱", layout="wide")
 
 st.title("🌱 Simulador Manual de Fertirriego Avanzado")
-st.write("Escribe libremente los Kilogramos y Gramos en la barra lateral para cuadrar los requerimientos a tu acomodo.")
+st.write("Escribe libremente tanto tus metas objetivo de PPM como los Kilogramos y Gramos para cuadrar los requerimientos a tu acomodo.")
 
 # ==========================================
 # BASE DE DATOS DE RIQUEZAS DE BODEGA
@@ -56,26 +56,26 @@ g_mn = st.sidebar.number_input("Naturmanganeso (g):", min_value=0.0, value=348.8
 g_mo = st.sidebar.number_input("Molibk (g):", min_value=0.0, value=2.8, step=0.5)
 
 # ==========================================
-# PANEL CENTRAL: METAS FIJAS DE TU TABLA
+# PANEL CENTRAL: REQUERIMIENTOS MODIFICABLES
 # ==========================================
-st.header("🎯 Tus Metas Teóricas (PPM)")
+st.header("🎯 Tus Metas Teóricas (Modifica los valores de PPM según tu cultivo)")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("Meta NO₃⁻", "133.6 PPM")
-    st.metric("Meta NH₄⁺", "23.6 PPM")
-    st.metric("Meta CaO", "158.6 PPM")
+    tgt_no3 = st.number_input("Meta Nitrato (NO₃⁻):", value=133.6, step=1.0)
+    tgt_nh4 = st.number_input("Meta Amonio (NH₄⁺):", value=23.6, step=1.0)
+    tgt_cao = st.number_input("Meta Calcio (CaO):", value=158.6, step=1.0)
 with col2:
-    st.metric("Meta P₂O₅", "81.4 PPM")
-    st.metric("Meta K₂O", "503.6 PPM")
-    st.metric("Meta MgO", "63.8 PPM")
+    tgt_p2o5 = st.number_input("Meta Fósforo (P₂O₅):", value=81.4, step=1.0)
+    tgt_k2o = st.number_input("Meta Potasio (K₂O):", value=503.6, step=5.0)
+    tgt_mgo = st.number_input("Meta Magnesio (MgO):", value=63.8, step=1.0)
 with col3:
-    st.metric("Meta Hierro (Fe)", "3.43 PPM")
-    st.metric("Meta Manganeso (Mn)", "1.61 PPM")
-    st.metric("Meta Zinc (Zn)", "0.86 PPM")
+    tgt_fe = st.number_input("Meta Hierro (Fe):", value=3.43, step=0.1)
+    tgt_mn = st.number_input("Meta Manganeso (Mn):", value=1.61, step=0.1)
+    tgt_zn = st.number_input("Meta Zinc (Zn):", value=0.86, step=0.1)
 with col4:
-    st.metric("Meta Boro (B)", "0.64 PPM")
-    st.metric("Meta Cobre (Cu)", "0.54 PPM")
-    st.metric("Meta Molibdeno (Mo)", "0.0107 PPM")
+    tgt_b = st.number_input("Meta Boro (B):", value=0.64, step=0.1)
+    tgt_cu = st.number_input("Meta Cobre (Cu):", value=0.54, step=0.1)
+    tgt_mo = st.number_input("Meta Molibdeno (Mo):", value=0.0107, format="%.4f")
 
 # ==========================================
 # CÁLCULO DE PPM LOGRADAS EN TIEMPO REAL
@@ -117,20 +117,20 @@ ppm_mo = calcular_ppm_manual(g_mo, RIQUEZAS["Molibk"], volumen_agua)
 # ==========================================
 st.markdown("---")
 st.header("📋 Matriz de Auditoría y Verificación de Excesos (PPM Reales)")
-st.write("Modifica los valores de la izquierda para ver cómo cambian los balances al instante:")
+st.write("Modifica los requerimientos arriba o las dosis a la izquierda para balancear tu receta al instante:")
 
-st.write(f"**Nitrógeno Nitratado (NO₃⁻):** Logrado: `{logrado['NO3']:.1f}` / Meta: `133.6` PPM")
-st.write(f"**Nitrógeno Amoniacal (NH₄⁺):** Logrado: `{logrado['NH4']:.1f}` / Meta: `23.6` PPM")
-st.write(f"**Calcio (CaO):** Logrado: `{logrado['CaO']:.1f}` / Meta: `241.2` PPM")
-st.write(f"**Fósforo (P₂O₅):** Logrado: `{logrado['P2O5']:.1f}` / Meta: `81.4` PPM")
-st.write(f"**Potasio (K₂O):** Logrado: `{logrado['K2O']:.1f}` / Meta: `503.6` PPM")
-st.write(f"**Magnesio (MgO):** Logrado: `{logrado['MgO']:.1f}` / Meta: `63.8` PPM")
+st.write(f"**Nitrógeno Nitratado (NO₃⁻):** Logrado: `{logrado['NO3']:.1f}` / Meta: `{tgt_no3:.1f}` PPM")
+st.write(f"**Nitrógeno Amoniacal (NH₄⁺):** Logrado: `{logrado['NH4']:.1f}` / Meta: `{tgt_nh4:.1f}` PPM")
+st.write(f"**Calcio (CaO):** Logrado: `{logrado['CaO']:.1f}` / Meta: `{tgt_cao:.1f}` PPM")
+st.write(f"**Fósforo (P₂O₅):** Logrado: `{logrado['P2O5']:.1f}` / Meta: `{tgt_p2o5:.1f}` PPM")
+st.write(f"**Potasio (K₂O):** Logrado: `{logrado['K2O']:.1f}` / Meta: `{tgt_k2o:.1f}` PPM")
+st.write(f"**Magnesio (MgO):** Logrado: `{logrado['MgO']:.1f}` / Meta: `{tgt_mgo:.1f}` PPM")
 st.write(f"**Azufre Solupotasse (SO₃):** `{logrado['SO3']:.1f}` PPM | **Azufre Sulmag (S puro):** `{logrado['S_puro']:.1f}` PPM")
 
 st.markdown("#### Balance de Elementos Menores Logrado:")
-st.write(f"• **Hierro (Fe):** Logrado: `{ppm_fe:.2f}` / Meta: `3.43` PPM")
-st.write(f"• **Boro (B):** Logrado: `{ppm_b:.2f}` / Meta: `0.64` PPM")
-st.write(f"• **Cobre (Cu):** Logrado: `{ppm_cu:.2f}` / Meta: `0.54` PPM")
-st.write(f"• **Zinc (Zn):** Logrado: `{ppm_zn:.2f}` / Meta: `0.86` PPM")
-st.write(f"• **Manganeso (Mn):** Logrado: `{ppm_mn:.2f}` / Meta: `1.61` PPM")
-st.write(f"• **Molibdeno (Mo):** Logrado: `{ppm_mo:.4f}` / Meta: `0.0107` PPM")
+st.write(f"• **Hierro (Fe):** Logrado: `{ppm_fe:.2f}` / Meta: `{tgt_fe:.2f}` PPM")
+st.write(f"• **Boro (B):** Logrado: `{ppm_b:.2f}` / Meta: `{tgt_b:.2f}` PPM")
+st.write(f"• **Cobre (Cu):** Logrado: `{ppm_cu:.2f}` / Meta: `{tgt_cu:.2f}` PPM")
+st.write(f"• **Zinc (Zn):** Logrado: `{ppm_zn:.2f}` / Meta: `{tgt_zn:.2f}` PPM")
+st.write(f"• **Manganeso (Mn):** Logrado: `{ppm_mn:.2f}` / Meta: `{tgt_mn:.2f}` PPM")
+st.write(f"• **Molibdeno (Mo):** Logrado: `{ppm_mo:.4f}` / Meta: `{tgt_mo:.4f}` PPM")
