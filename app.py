@@ -128,14 +128,13 @@ with col4:
     tgt_so3 = st.number_input("Meta Azufre (SO₃):", value=45.0, step=1.0)
 
 # ==========================================
-# ALGORITMO DINÁMICO DE ACUMULACIÓN TOTAL (CON FILTRO ANTICAÍDAS)
+# ALGORITMO DINÁMICO DE ACUMULACIÓN TOTAL
 # ==========================================
 logrado = {
     "NO3_crudo": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0,
     "Fe": 0.0, "Mn": 0.0, "Zn": 0.0, "Cu": 0.0, "B": 0.0, "Mo": 0.0
 }
 
-# Procesamiento seguro de la bodega usando .get() para evitar KeyErrors
 for producto, kg in pesos_ingresados.items():
     gramos = kg * 1000.0
     if gramos > 0:
@@ -148,7 +147,6 @@ for producto, kg in pesos_ingresados.items():
         logrado["NH4"] += (gramos * f_db.get("NH4", 0.0)) / denominador_agua
         logrado["NO3_crudo"] += (gramos * f_db.get("NO3", 0.0)) / denominador_agua
         
-        # Lectura con guardas protectoras para los menores integrados
         logrado["Fe"] += (gramos * f_db.get("Fe", 0.0)) / denominador_agua
         logrado["Mn"] += (gramos * f_db.get("Mn", 0.0)) / denominador_agua
         logrado["Zn"] += (gramos * f_db.get("Zn", 0.0)) / denominador_agua
@@ -156,6 +154,9 @@ for producto, kg in pesos_ingresados.items():
         logrado["B"] += (gramos * f_db.get("B", 0.0)) / denominador_agua
         logrado["Mo"] += (gramos * f_db.get("Mo", 0.0)) / denominador_agua
 
-# Calibración milimétrica para tu nitrógeno de amarre
+# Calibración milimétrica para tu nitrógeno de amarre de libreta
 total_no3 = logrado["NO3_crudo"] * (197.3 / 72.2)
+
+# Aportes colaterales de Potasio (3%) en los gramos de Klip Boro y Molibk puros
+total_k2o = logrado["K2O"] + ((g_b * 3.0) / denominador_agua) + ((g_mo * 3.0) / denominador_agua)
 
