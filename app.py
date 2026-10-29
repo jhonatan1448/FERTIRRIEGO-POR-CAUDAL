@@ -1,411 +1,180 @@
-# -*- coding: utf-8 -*-
-"""
-Fertirriego Inteligente Pro
-Calculadora profesional de soluciones nutritivas (líneas comerciales Colombia).
-Motor de balance por mínimos cuadrados no negativos (NNLS) con fallback secuencial.
-"""
-
-from __future__ import annotations
-
-import io
-from dataclasses import dataclass, field
-
-import pandas as pd
 import streamlit as st
 
-try:
-    from scipy.optimize import nnls
-    SCIPY_OK = True
-except Exception:  # pragma: no cover
-    SCIPY_OK = False
+st.set_page_config(page_title="Fertirriego Inteligente Pro", page_icon="🌱", layout="wide")
 
+st.title("🌱 Software Profesional de Fertirriego (Líneas Oficiales Colombia)")
+st.write("Auditoría milimétrica por elemento. Balance dinámico inteligente con descuento de agua de riego.")
 
-# ==============================================================================
-# CONFIGURACIÓN DE PÁGINA
-# ==============================================================================
-st.set_page_config(
-    page_title="Fertirriego Inteligente Pro",
-    page_icon="🌱",
-    layout="wide",
-)
-
-ELEMENTOS = ["NO3", "NH4", "CaO", "P2O5", "K2O", "MgO"]
-
-ETIQUETAS = {
-    "NO3": "Nitrógeno nítrico (N-NO₃⁻)",
-    "NH4": "Nitrógeno amoniacal (N-NH₄⁺)",
-    "CaO": "Calcio (CaO)",
-    "P2O5": "Fósforo (P₂O₅)",
-    "K2O": "Potasio (K₂O)",
-    "MgO": "Magnesio (MgO)",
-    "S": "Azufre (S)",
+# ==========================================
+# BASE DE DATOS DE FERTILIZANTES AGRUPADA (Riquezas Oficiales)
+# ==========================================
+FERTILIZANTES_DB = {
+    "YaraLiva CALCINIT": {"N_total": 15.5, "NO3": 14.4, "NH4": 1.1, "CaO": 26.5, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
+    "Sulfato de Potasio (Solupotasse)": {"N_total": 0.0, "NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 51.0, "MgO": 0.0, "SO3": 45.0},
+    "Fosfato Monopotásico (MKP)": {"N_total": 0.0, "NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 52.0, "K2O": 34.0, "MgO": 0.0, "SO3": 0.0},
+    "Haifa DKP (0-41-54)": {"N_total": 0.0, "NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 41.0, "K2O": 54.0, "MgO": 0.0, "SO3": 0.0},
+    "Sulfato de Magnesio": {"N_total": 0.0, "NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 16.0, "SO3": 32.0},
+    "Nitrato de Magnesio": {"N_total": 11.0, "NO3": 11.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 15.0, "SO3": 0.0},
+    "Nitrato de Amonio": {"N_total": 34.0, "NO3": 17.0, "NH4": 17.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
+    
+    # --- LÍNEA: VAN IPEREN COLOMBIA ---
+    "Van Iperen INICIO (11-32-11)": {"N_total": 11.0, "NO3": 5.5, "NH4": 5.5, "CaO": 0.0, "P2O5": 32.0, "K2O": 11.0, "MgO": 0.0, "SO3": 0.0},
+    "Van Iperen DESARROLLO (20-20-20)": {"N_total": 20.0, "NO3": 10.0, "NH4": 10.0, "CaO": 0.0, "P2O5": 20.0, "K2O": 20.0, "MgO": 0.0, "SO3": 0.0},
+    "Van Iperen PRODUCCION (12-5-40)": {"N_total": 12.0, "NO3": 7.0, "NH4": 5.0, "CaO": 0.0, "P2O5": 5.0, "K2O": 40.0, "MgO": 0.0, "SO3": 0.0},
+    
+    # --- LÍNEA: HAIFA POLY-FEED COLOMBIA ---
+    "Haifa Poly-Feed INICIO (13-36-13)": {"N_total": 13.0, "NO3": 6.5, "NH4": 6.5, "CaO": 0.0, "P2O5": 36.0, "K2O": 13.0, "MgO": 0.0, "SO3": 0.0},
+    "Haifa Poly-Feed DESARROLLO (19-19-19)": {"N_total": 19.0, "NO3": 9.5, "NH4": 9.5, "CaO": 0.0, "P2O5": 19.0, "K2O": 19.0, "MgO": 0.0, "SO3": 0.0},
+    "Haifa Poly-Feed PRODUCCION (10-10-43)": {"N_total": 10.0, "NO3": 5.0, "NH4": 5.0, "CaO": 0.0, "P2O5": 10.0, "K2O": 43.0, "MgO": 0.0, "SO3": 0.0}
 }
 
-
-# ==============================================================================
-# BASE DE DATOS DE FERTILIZANTES (riquezas de etiqueta, % p/p)
-# ==============================================================================
-@dataclass
-class Fertilizante:
-    nombre: str
-    NO3: float = 0.0
-    NH4: float = 0.0
-    CaO: float = 0.0
-    P2O5: float = 0.0
-    K2O: float = 0.0
-    MgO: float = 0.0
-    S: float = 0.0
-    tanque: str = "B"           # "A" = calcios/nitratos, "B" = sulfatos/fosfatos, "AB" = indiferente
-    familia: str = "Simple"
-    incompatible: tuple = field(default_factory=tuple)
-
-    @property
-    def N_total(self) -> float:
-        return self.NO3 + self.NH4
-
-    def riqueza(self, elem: str) -> float:
-        return float(getattr(self, elem, 0.0))
-
-
-FERTILIZANTES_DB: dict[str, Fertilizante] = {
-    # --- Fuentes simples ---
-    "YaraLiva CALCINIT": Fertilizante(
-        "YaraLiva CALCINIT", NO3=14.4, NH4=1.1, CaO=26.5,
-        tanque="A", familia="Calcio", incompatible=("sulfato", "fosfato"),
-    ),
-    "Nitrato de Potasio": Fertilizante(
-        "Nitrato de Potasio", NO3=13.5, K2O=46.0, tanque="A", familia="Potasio",
-    ),
-    "Sulfato de Potasio (Solupotasse)": Fertilizante(
-        "Sulfato de Potasio (Solupotasse)", K2O=51.0, S=18.0,
-        tanque="B", familia="Potasio",
-    ),
-    "Fosfato Monopotásico (MKP)": Fertilizante(
-        "Fosfato Monopotásico (MKP)", P2O5=52.0, K2O=34.0,
-        tanque="B", familia="Fósforo",
-    ),
-    "Haifa DKP (0-41-54)": Fertilizante(
-        "Haifa DKP (0-41-54)", P2O5=41.0, K2O=54.0, tanque="B", familia="Fósforo",
-    ),
-    "Sulfato de Magnesio": Fertilizante(
-        "Sulfato de Magnesio", MgO=16.0, S=13.0, tanque="B", familia="Magnesio",
-    ),
-    "Nitrato de Magnesio": Fertilizante(
-        "Nitrato de Magnesio", NO3=11.0, MgO=15.0, tanque="A", familia="Magnesio",
-    ),
-    "Nitrato de Amonio": Fertilizante(
-        "Nitrato de Amonio", NO3=17.0, NH4=17.0, tanque="AB", familia="Nitrógeno",
-    ),
-    "Sulfato de Amonio": Fertilizante(
-        "Sulfato de Amonio", NH4=21.0, S=24.0, tanque="B", familia="Nitrógeno",
-    ),
-    "Ácido Fosfórico 85%": Fertilizante(
-        "Ácido Fosfórico 85%", P2O5=61.0, tanque="B", familia="Ácido",
-    ),
-
-    # --- Línea Van Iperen Colombia ---
-    "Van Iperen INICIO (11-32-11)": Fertilizante(
-        "Van Iperen INICIO (11-32-11)", NO3=5.5, NH4=5.5, P2O5=32.0, K2O=11.0,
-        tanque="B", familia="NPK complejo",
-    ),
-    "Van Iperen DESARROLLO (20-20-20)": Fertilizante(
-        "Van Iperen DESARROLLO (20-20-20)", NO3=10.0, NH4=10.0, P2O5=20.0, K2O=20.0,
-        tanque="B", familia="NPK complejo",
-    ),
-    "Van Iperen PRODUCCION (12-5-40)": Fertilizante(
-        "Van Iperen PRODUCCION (12-5-40)", NO3=7.0, NH4=5.0, P2O5=5.0, K2O=40.0,
-        tanque="B", familia="NPK complejo",
-    ),
-
-    # --- Línea Haifa Poly-Feed Colombia ---
-    "Haifa Poly-Feed INICIO (13-36-13)": Fertilizante(
-        "Haifa Poly-Feed INICIO (13-36-13)", NO3=6.5, NH4=6.5, P2O5=36.0, K2O=13.0,
-        tanque="B", familia="NPK complejo",
-    ),
-    "Haifa Poly-Feed DESARROLLO (19-19-19)": Fertilizante(
-        "Haifa Poly-Feed DESARROLLO (19-19-19)", NO3=9.5, NH4=9.5, P2O5=19.0, K2O=19.0,
-        tanque="B", familia="NPK complejo",
-    ),
-    "Haifa Poly-Feed PRODUCCION (10-10-43)": Fertilizante(
-        "Haifa Poly-Feed PRODUCCION (10-10-43)", NO3=5.0, NH4=5.0, P2O5=10.0, K2O=43.0,
-        tanque="B", familia="NPK complejo",
-    ),
-}
-
-NPK_COMPLEJOS = [k for k, v in FERTILIZANTES_DB.items() if v.familia == "NPK complejo"]
-
-
-# ==============================================================================
-# MICRONUTRIENTES (quelatos / complejos comerciales)
-# riqueza = % del elemento objetivo; colateral = aportes secundarios en %
-# ==============================================================================
-MICROS_DB = {
-    "B":  {"producto": "Klip Boro",        "riqueza": 20.5, "colateral": {"K2O": 3.0}},
-    "Fe": {"producto": "Naturquel Fe",     "riqueza": 6.0,  "colateral": {}},
-    "Cu": {"producto": "Kellus Cu",        "riqueza": 13.5, "colateral": {}},
-    "Zn": {"producto": "NaturZinc",        "riqueza": 13.0, "colateral": {}},
-    "Mn": {"producto": "NaturManganeso",   "riqueza": 12.0, "colateral": {}},
-    "Mo": {"producto": "Molib-K",          "riqueza": 10.0, "colateral": {}},
-}
-
-
-# ==============================================================================
-# FUNCIONES DE CONVERSIÓN
-# ==============================================================================
-def gramos_desde_ppm(ppm: float, riqueza: float, volumen_l: float) -> float:
-    """Gramos de producto necesarios para alcanzar `ppm` (mg/L) en `volumen_l`."""
-    if riqueza <= 0 or volumen_l <= 0:
+# Funciones de conversión matemáticas
+def calcular_gramos(ppm, riqueza, volumen):
+    if riqueza <= 0:
         return 0.0
-    return (ppm * volumen_l * 0.1) / riqueza
+    return (ppm * volumen * 0.1) / riqueza
 
-
-def ppm_desde_gramos(gramos: float, riqueza: float, volumen_l: float) -> float:
-    """ppm (mg/L) que aportan `gramos` de producto en `volumen_l`."""
-    if volumen_l <= 0:
+def calcular_ppm(gramos, riqueza, volumen):
+    if volumen <= 0:
         return 0.0
-    return (gramos * riqueza) / (volumen_l * 0.1)
+    return (gramos * riqueza) / (volumen * 0.1)
 
+# ==========================================
+# BARRA LATERAL: CONTROL DE AGUA Y DESCUENTOS
+# ==========================================
+st.sidebar.header("💧 Datos de Volumen")
+volumen_agua = st.sidebar.number_input("Volumen de agua (Litros):", min_value=1, value=16000)
 
-def oxido_a_elemento(valor: float, oxido: str) -> float:
-    """Convierte óxido -> elemento (factores estequiométricos estándar)."""
-    factores = {"CaO": 0.7147, "P2O5": 0.4364, "K2O": 0.8301, "MgO": 0.6030}
-    return valor * factores.get(oxido, 1.0)
+st.sidebar.header("🧪 Análisis de Agua de Riego (Aporte presente)")
+descontar_agua = st.sidebar.checkbox("Descontar análisis del agua de riego", value=True)
 
+no3_agua = st.sidebar.number_input("N-NO3 Agua (PPM):", value=2.0) if descontar_agua else 0.0
+nh4_agua = st.sidebar.number_input("N-NH4 Agua (PPM):", value=0.0) if descontar_agua else 0.0
+cao_agua = st.sidebar.number_input("CaO Agua (PPM):", value=40.0) if descontar_agua else 0.0
+mgo_agua = st.sidebar.number_input("MgO Agua (PPM):", value=12.0) if descontar_agua else 0.0
+k2o_agua = st.sidebar.number_input("K2O Agua (PPM):", value=3.0) if descontar_agua else 0.0
+p2o5_agua = st.sidebar.number_input("P2O5 Agua (PPM):", value=0.0) if descontar_agua else 0.0
 
-# ==============================================================================
-# MOTOR DE BALANCE
-# ==============================================================================
-def resolver_nnls(
-    productos: list[str],
-    objetivos: dict[str, float],
-    volumen_l: float,
-    pesos: dict[str, float],
-) -> dict[str, float]:
-    """Mínimos cuadrados no negativos: minimiza ||W(Ax - b)|| con x >= 0."""
-    import numpy as np
-
-    A = np.array(
-        [
-            [
-                ppm_desde_gramos(1.0, FERTILIZANTES_DB[p].riqueza(e), volumen_l)
-                for p in productos
-            ]
-            for e in ELEMENTOS
-        ],
-        dtype=float,
-    )
-    b = np.array([objetivos[e] for e in ELEMENTOS], dtype=float)
-    w = np.array([pesos.get(e, 1.0) for e in ELEMENTOS], dtype=float).reshape(-1, 1)
-
-    x, _ = nnls(A * w, (b * w.ravel()))
-    return {p: float(g) for p, g in zip(productos, x)}
-
-
-def resolver_secuencial(
-    productos: list[str],
-    objetivos: dict[str, float],
-    volumen_l: float,
-) -> dict[str, float]:
-    """Fallback greedy por orden de prioridad agronómica (sin SciPy)."""
-    orden = ["MgO", "CaO", "P2O5", "K2O", "NH4", "NO3"]
-    pendiente = dict(objetivos)
-    sol = {p: 0.0 for p in productos}
-
-    for elem in orden:
-        if pendiente.get(elem, 0.0) <= 0.01:
-            continue
-        candidatos = [p for p in productos if FERTILIZANTES_DB[p].riqueza(elem) > 0]
-        if not candidatos:
-            continue
-        # el más concentrado en el elemento pendiente
-        elegido = max(candidatos, key=lambda p: FERTILIZANTES_DB[p].riqueza(elem))
-        fert = FERTILIZANTES_DB[elegido]
-        g = gramos_desde_ppm(pendiente[elem], fert.riqueza(elem), volumen_l)
-        sol[elegido] += g
-        for e in ELEMENTOS:
-            pendiente[e] = pendiente.get(e, 0.0) - ppm_desde_gramos(
-                g, fert.riqueza(e), volumen_l
-            )
-    return sol
-
-
-def calcular_aportes(
-    solucion: dict[str, float], volumen_l: float
-) -> dict[str, float]:
-    aportes = {e: 0.0 for e in ELEMENTOS + ["S"]}
-    for prod, g in solucion.items():
-        fert = FERTILIZANTES_DB[prod]
-        for e in aportes:
-            aportes[e] += ppm_desde_gramos(g, fert.riqueza(e), volumen_l)
-    return aportes
-
-
-# ==============================================================================
-# INTERFAZ: ENCABEZADO
-# ==============================================================================
-st.title("🌱 Fertirriego Inteligente Pro")
-st.caption(
-    "Balance de soluciones nutritivas con optimización no negativa, "
-    "descuento del análisis de agua y separación de tanques A/B."
+st.sidebar.header("📦 Selección de Fuentes")
+opcion_npk = st.sidebar.selectbox(
+    "Fórmula NPK Comercial Compleja:",
+    ["Ninguno (Usar Simples)", "Van Iperen INICIO (11-32-11)", "Van Iperen DESARROLLO (20-20-20)", "Van Iperen PRODUCCION (12-5-40)", "Haifa Poly-Feed INICIO (13-36-13)", "Haifa Poly-Feed DESARROLLO (19-19-19)", "Haifa Poly-Feed PRODUCCION (10-10-43)"]
 )
+opcion_k = st.sidebar.selectbox("Fuente Simple de Potasio:", ["Sulfato de Potasio (Solupotasse)", "Haifa DKP (0-41-54)"])
+opcion_mg = st.sidebar.selectbox("Fuente de Magnesio:", ["Sulfato de Magnesio", "Nitrato de Magnesio"])
 
-if not SCIPY_OK:
-    st.warning(
-        "SciPy no está disponible: se usará el motor secuencial de respaldo. "
-        "Añade `scipy` a requirements.txt para activar la optimización completa."
-    )
+# ==========================================
+# REQUERIMIENTOS OBJETIVO DEL CULTIVO (PPM)
+# ==========================================
+st.header("🧪 Requerimientos Objetivo del Cultivo (PPM)")
+col1, col2, col3, col4 = st.columns(4)
 
+with col1:
+    tgt_n = st.number_input("Meta NT Deseado:", value=157.0)
+    tgt_cao = st.number_input("Meta CaO Deseado:", value=241.2)
+with col2:
+    tgt_p2o5 = st.number_input("Meta P₂O₅ Deseado:", value=97.0)
+    tgt_k2o = st.number_input("Meta K₂O Deseado:", value=278.7)
+with col3:
+    tgt_mgo = st.number_input("Meta MgO Deseado:", value=64.0)
+    tgt_fe = st.number_input("Meta Hierro (Fe):", value=3.43)
+with col4:
+    tgt_b = st.number_input("Meta Boro (B):", value=0.92)
+    tgt_zn = st.number_input("Meta Zinc (Zn):", value=0.33)
+    tgt_cu = st.number_input("Meta Cobre (Cu):", value=0.54)
+    tgt_mn = st.number_input("Meta Manganeso (Mn):", value=2.47)
+    tgt_mo = st.number_input("Meta Molibdeno (Mo):", value=0.19)
 
-# ==============================================================================
-# SIDEBAR
-# ==============================================================================
-with st.sidebar:
-    st.header("💧 Volumen y agua")
-    volumen_agua = st.number_input(
-        "Volumen de solución final (L)",
-        min_value=1.0, value=16000.0, step=100.0, format="%.0f",
-    )
+# Sub-metas de Nitrógeno al 80% Nitrato / 20% Amonio aplicando el descuento de agua
+net_no3 = max(0.0, (tgt_n * 0.80) - no3_agua)
+net_nh4 = max(0.0, (tgt_n * 0.20) - nh4_agua)
+net_cao = max(0.0, tgt_cao - cao_agua)
+net_p2o5 = max(0.0, tgt_p2o5 - p2o5_agua)
+net_k2o = max(0.0, tgt_k2o - k2o_agua)
+net_mgo = max(0.0, tgt_mgo - mgo_agua)
 
-    usar_agua = st.checkbox("Descontar análisis del agua de riego", value=True)
-    agua = {e: 0.0 for e in ELEMENTOS}
-    if usar_agua:
-        st.caption("ppm presentes en la fuente de agua")
-        c1, c2 = st.columns(2)
-        with c1:
-            agua["NO3"] = st.number_input("N-NO₃ agua", min_value=0.0, value=2.0, step=0.5)
-            agua["CaO"] = st.number_input("CaO agua", min_value=0.0, value=40.0, step=1.0)
-            agua["K2O"] = st.number_input("K₂O agua", min_value=0.0, value=3.0, step=0.5)
-        with c2:
-            agua["NH4"] = st.number_input("N-NH₄ agua", min_value=0.0, value=0.0, step=0.5)
-            agua["MgO"] = st.number_input("MgO agua", min_value=0.0, value=12.0, step=1.0)
-            agua["P2O5"] = st.number_input("P₂O₅ agua", min_value=0.0, value=0.0, step=0.5)
-
-    st.header("📦 Fuentes disponibles en bodega")
-    opcion_npk = st.selectbox(
-        "NPK complejo (opcional)", ["Ninguno (solo fuentes simples)"] + NPK_COMPLEJOS
-    )
-    simples_default = [
-        "YaraLiva CALCINIT",
-        "Sulfato de Potasio (Solupotasse)",
-        "Fosfato Monopotásico (MKP)",
-        "Sulfato de Magnesio",
-        "Nitrato de Amonio",
-        "Sulfato de Amonio",
-    ]
-    simples = st.multiselect(
-        "Fuentes simples habilitadas",
-        [k for k, v in FERTILIZANTES_DB.items() if v.familia != "NPK complejo"],
-        default=simples_default,
-    )
-
-    st.header("⚙️ Parámetros del balance")
-    pct_no3 = st.slider("% del N total como nitrato", 50, 100, 80, step=5)
-    st.caption(f"Relación NO₃ : NH₄ = {pct_no3} : {100 - pct_no3}")
-
-    st.subheader("Prioridad por elemento")
-    st.caption("Mayor peso = el optimizador se ajusta más estrictamente a esa meta.")
-    pesos = {
-        "NO3": st.slider("Peso NO₃", 0.1, 5.0, 1.0, 0.1),
-        "NH4": st.slider("Peso NH₄", 0.1, 5.0, 2.0, 0.1),
-        "CaO": st.slider("Peso CaO", 0.1, 5.0, 2.0, 0.1),
-        "P2O5": st.slider("Peso P₂O₅", 0.1, 5.0, 1.5, 0.1),
-        "K2O": st.slider("Peso K₂O", 0.1, 5.0, 1.5, 0.1),
-        "MgO": st.slider("Peso MgO", 0.1, 5.0, 2.0, 0.1),
-    }
-    motor = st.radio(
-        "Motor de cálculo",
-        ["Optimizador NNLS", "Secuencial (greedy)"],
-        index=0 if SCIPY_OK else 1,
-        disabled=not SCIPY_OK,
-    )
-
+# Inicializador de aportes finales reales en el riego (sumando el agua base)
+aportes = {"NO3": no3_agua, "NH4": nh4_agua, "CaO": cao_agua, "P2O5": p2o5_agua, "K2O": k2o_agua, "MgO": mgo_agua, "SO3": 0.0}
+pesos_finales = {}
 
 # ==============================================================================
-# METAS DEL CULTIVO
+# ALGORITMO DE BALANCE DINÁMICO SECUENCIAL CORREGIDO
 # ==============================================================================
-st.subheader("🧪 Requerimientos objetivo del cultivo (ppm)")
 
-cm1, cm2, cm3 = st.columns(3)
-with cm1:
-    tgt_n = st.number_input("N total", min_value=0.0, value=157.0, step=1.0)
-    tgt_cao = st.number_input("CaO", min_value=0.0, value=241.2, step=1.0)
-with cm2:
-    tgt_p2o5 = st.number_input("P₂O₅", min_value=0.0, value=97.0, step=1.0)
-    tgt_k2o = st.number_input("K₂O", min_value=0.0, value=278.7, step=1.0)
-with cm3:
-    tgt_mgo = st.number_input("MgO", min_value=0.0, value=64.0, step=1.0)
-    tolerancia = st.number_input(
-        "Tolerancia aceptable (±%)", min_value=1.0, value=5.0, step=1.0
-    )
+# Paso 1. MICRONUTRIENTES DAYMSA SÓLIDOS
+g_klipboro = calcular_gramos(tgt_b, 20.5, volumen_agua)
+g_naturquel_fe = calcular_gramos(tgt_fe, 6.0, volumen_agua)
+g_kellus_cu = calcular_gramos(tgt_cu, 13.5, volumen_agua)
+g_naturzinc = calcular_gramos(tgt_zn, 13.0, volumen_agua)
+g_naturmanganeso = calcular_gramos(tgt_mn, 12.0, volumen_agua)
+g_molibk = calcular_gramos(tgt_mo, 10.0, volumen_agua)
 
-with st.expander("🔬 Micronutrientes objetivo (ppm)", expanded=False):
-    mc1, mc2, mc3 = st.columns(3)
-    with mc1:
-        tgt_fe = st.number_input("Fe", min_value=0.0, value=3.43, step=0.01)
-        tgt_b = st.number_input("B", min_value=0.0, value=0.92, step=0.01)
-    with mc2:
-        tgt_zn = st.number_input("Zn", min_value=0.0, value=0.33, step=0.01)
-        tgt_cu = st.number_input("Cu", min_value=0.0, value=0.54, step=0.01)
-    with mc3:
-        tgt_mn = st.number_input("Mn", min_value=0.0, value=2.47, step=0.01)
-        tgt_mo = st.number_input("Mo", min_value=0.0, value=0.19, step=0.01)
+# El Klip Boro aporta un 3% de K2O colateral
+aportes["K2O"] += calcular_ppm(g_klipboro, 3.0, volumen_agua)
 
-metas_micro = {
-    "Fe": tgt_fe, "B": tgt_b, "Zn": tgt_zn,
-    "Cu": tgt_cu, "Mn": tgt_mn, "Mo": tgt_mo,
-}
-
-
-# ==============================================================================
-# CÁLCULO
-# ==============================================================================
-# 1) Micronutrientes y sus aportes colaterales de macro
-micro_pesos: dict[str, float] = {}
-colateral_macro = {e: 0.0 for e in ELEMENTOS}
-
-for elem, meta in metas_micro.items():
-    info = MICROS_DB[elem]
-    g = gramos_desde_ppm(meta, info["riqueza"], volumen_agua)
-    micro_pesos[info["producto"]] = g
-    for ox, riq in info["colateral"].items():
-        colateral_macro[ox] += ppm_desde_gramos(g, riq, volumen_agua)
-
-# 2) Metas netas = meta - agua - colateral de micros
-metas_brutas = {
-    "NO3": tgt_n * pct_no3 / 100.0,
-    "NH4": tgt_n * (100 - pct_no3) / 100.0,
-    "CaO": tgt_cao,
-    "P2O5": tgt_p2o5,
-    "K2O": tgt_k2o,
-    "MgO": tgt_mgo,
-}
-metas_netas = {
-    e: max(0.0, metas_brutas[e] - agua.get(e, 0.0) - colateral_macro.get(e, 0.0))
-    for e in ELEMENTOS
-}
-
-# 3) Cartera de productos habilitados
-productos = list(simples)
-if opcion_npk != "Ninguno (solo fuentes simples)":
-    productos.append(opcion_npk)
-productos = list(dict.fromkeys(productos))
-
-if not productos:
-    st.error("Selecciona al menos una fuente fertilizante en la barra lateral.")
-    st.stop()
-
-# 4) Resolver
-if motor == "Optimizador NNLS" and SCIPY_OK:
-    solucion = resolver_nnls(productos, metas_netas, volumen_agua, pesos)
+# Paso 2. MAGNESIO NETO REQUERIDO
+if opcion_mg == "Sulfato de Magnesio":
+    g_sulfmg = calcular_gramos(net_mgo, FERTILIZANTES_DB["Sulfato de Magnesio"]["MgO"], volumen_agua)
+    pesos_finales["Sulfato de Magnesio"] = g_sulfmg
+    aportes["MgO"] += net_mgo
+    aportes["SO3"] += calcular_ppm(g_sulfmg, FERTILIZANTES_DB["Sulfato de Magnesio"]["SO3"], volumen_agua)
 else:
-    solucion = resolver_secuencial(productos, metas_netas, volumen_agua)
+    g_nitmg = calcular_gramos(net_mgo, FERTILIZANTES_DB["Nitrato de Magnesio"]["MgO"], volumen_agua)
+    pesos_finales["Nitrato de Magnesio"] = g_nitmg
+    aportes["MgO"] += net_mgo
+    aportes["NO3"] += calcular_ppm(g_nitmg, FERTILIZANTES_DB["Nitrato de Magnesio"]["NO3"], volumen_agua)
 
-solucion = {p: g for p, g in solucion.items() if g > 0.01}
-aportes_fert = calcular_aportes(solucion, volumen_agua)
+# Paso 3. CALCIO NETO REQUERIDO (YaraLiva Calcinit)
+g_calcinit = calcular_gramos(net_cao, FERTILIZANTES_DB["YaraLiva CALCINIT"]["CaO"], volumen_agua)
+pesos_finales["YaraLiva CALCINIT"] = g_calcinit
+aportes["CaO"] += net_cao
+aportes["NO3"] += calcular_ppm(g_calcinit, FERTILIZANTES_DB["YaraLiva CALCINIT"]["NO3"], volumen_agua)
+aportes["NH4"] += calcular_ppm(g_calcinit, FERTILIZANTES_DB["YaraLiva CALCINIT"]["NH4"], volumen_agua)
 
-# 5) ppm finales en el gotero = fertilizantes + agua + colateral de micros
-final = {
-    e: aportes_fert.get(e, 0.0) + agua.get(e, 0.0) + colateral_macro.get(e, 0.0)
-    for e in ELEMENTOS
-}
-final["S"] = aportes_f
+# Paso 4. FÓRMULA NPK COMERCIAL COMPLEJA
+if opcion_npk != "Ninguno (Usar Simples)":
+    db_npk = FERTILIZANTES_DB[opcion_npk]
+    k2o_disp = max(0.0, tgt_k2o - aportes["K2O"])
+    g_por_p = calcular_gramos(net_p2o5, db_npk["P2O5"], volumen_agua) if db_npk["P2O5"] > 0 else 999999
+    g_por_k = calcular_gramos(k2o_disp, db_npk["K2O"], volumen_agua) if db_npk["K2O"] > 0 else 999999
+    
+    g_npk_aplicar = min(g_por_p, g_por_k)
+    pesos_finales[opcion_npk] = g_npk_aplicar
+    
+    for elem in ["NO3", "NH4", "P2O5", "K2O", "SO3"]:
+        aportes[elem] += calcular_ppm(g_npk_aplicar, db_npk[elem], volumen_agua)
+
+# Paso 5. POTASIO COMPLEMENTARIO SIMPLE
+k2o_restante = max(0.0, tgt_k2o - aportes["K2O"])
+if k2o_restante > 0:
+    db_k = FERTILIZANTES_DB[opcion_k]
+    if opcion_k == "Haifa DKP (0-41-54)":
+        p2o5_disp = max(0.0, tgt_p2o5 - aportes["P2O5"])
+        g_por_k_dkp = calcular_gramos(k2o_restante, db_k["K2O"], volumen_agua)
+        g_por_p_dkp = calcular_gramos(p2o5_disp, db_k["P2O5"], volumen_agua) if db_k["P2O5"] > 0 else 999999
+        g_k_aplicar = min(g_por_k_dkp, g_por_p_dkp)
+    else:
+        g_k_aplicar = calcular_gramos(k2o_restante, db_k["K2O"], volumen_agua)
+        
+    pesos_finales[opcion_k] = g_k_aplicar
+    aportes["K2O"] += calcular_ppm(g_k_aplicar, db_k["K2O"], volumen_agua)
+    aportes["SO3"] += calcular_ppm(g_k_aplicar, db_k["SO3"], volumen_agua)
+    if opcion_k == "Haifa DKP (0-41-54)":
+        aportes["P2O5"] += calcular_ppm(g_k_aplicar, db_k["P2O5"], volumen_agua)
+
+# Paso 6. FÓSFORO COMPLEMENTARIO SIMPLE (MKP)
+p2o5_restante = max(0.0, tgt_p2o5 - aportes["P2O5"])
+if p2o5_restante > 0:
+    g_mkp = calcular_gramos(p2o5_restante, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["P2O5"], volumen_agua)
+    pesos_finales["Fosfato Monopotásico (MKP)"] = g_mkp
+    aportes["P2O5"] += p2o5_restante
+    aportes["K2O"] += calcular_ppm(g_mkp, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["K2O"], volumen_agua)
+
+# Paso 7. COMPENSACIÓN FINAL DE NITRÓGENO (Nitrato de Amonio)
+no3_faltante = max(0.0, tgt_no3 - aportes["NO3"])
+nh4_faltante = max(0.0, tgt_nh4 - aportes["NH4"])
+n_compensar = max(no3_faltante, nh4_faltante)
+
+if n_compensar > 0:
+    g_nit_amonio = calcular_gramos(n_compensar, FERTILIZANTES_DB["Nitrato de Amonio"]["NO3"], volumen_agua)
+    pesos_finales["Nitrato de Amonio"] = g_nit_amonio
