@@ -85,20 +85,24 @@ with col4:
     tgt_mn = st.number_input("Meta Manganeso (Mn):", value=2.47)
     tgt_mo = st.number_input("Meta Molibdeno (Mo):", value=0.19)
 
-# Sub-metas de Nitrógeno al 80% Nitrato / 20% Amonio aplicando el descuento de agua
-net_no3 = max(0.0, (tgt_n * 0.80) - no3_agua)
-net_nh4 = max(0.0, (tgt_n * 0.20) - nh4_agua)
+# Sub-metas de Nitrógeno fijadas al 80% Nitrato / 20% Amonio fijas
+tgt_no3 = tgt_n * 0.80
+tgt_nh4 = tgt_n * 0.20
+
+# Cálculo de necesidades NETAS (restando el agua) que usará el algoritmo secuencial
+net_no3 = max(0.0, tgt_no3 - no3_agua)
+net_nh4 = max(0.0, tgt_nh4 - nh4_agua)
 net_cao = max(0.0, tgt_cao - cao_agua)
 net_p2o5 = max(0.0, tgt_p2o5 - p2o5_agua)
 net_k2o = max(0.0, tgt_k2o - k2o_agua)
 net_mgo = max(0.0, tgt_mgo - mgo_agua)
 
-# Inicializador de aportes finales reales en el riego (sumando el agua base)
+# Inicializador de aportes totales logrados reales en el riego (sumando la base del agua)
 aportes = {"NO3": no3_agua, "NH4": nh4_agua, "CaO": cao_agua, "P2O5": p2o5_agua, "K2O": k2o_agua, "MgO": mgo_agua, "SO3": 0.0}
 pesos_finales = {}
 
 # ==============================================================================
-# ALGORITMO DE BALANCE DINÁMICO SECUENCIAL CORREGIDO
+# ALGORITMO DE BALANCE DINÁMICO SECUENCIAL
 # ==============================================================================
 
 # Paso 1. MICRONUTRIENTES DAYMSA SÓLIDOS
@@ -176,5 +180,4 @@ nh4_faltante = max(0.0, tgt_nh4 - aportes["NH4"])
 n_compensar = max(no3_faltante, nh4_faltante)
 
 if n_compensar > 0:
-    g_nit_amonio = calcular_gramos(n_compensar, FERTILIZANTES_DB["Nitrato de Amonio"]["NO3"], volumen_agua)
-    pesos_finales["Nitrato de Amonio"] = g_nit_amonio
+
