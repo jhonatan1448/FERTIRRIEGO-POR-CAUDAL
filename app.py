@@ -1,38 +1,18 @@
 import streamlit as st
 
-st.set_page_config(page_title="Simulador de Fertirriego Flexible", page_icon="🌱", layout="wide")
+st.set_page_config(page_title="Simulador de Fertirriego Colombia", page_icon="🌱", layout="wide")
 
 st.title("🌱 Simulador Manual de Fertirriego Avanzado")
 st.write("Escribe libremente tanto tus metas objetivo de PPM como los Kilogramos y Gramos para cuadrar los requerimientos a tu acomodo.")
 
-# ==========================================
-# BASE DE DATOS DE RIQUEZAS DE BODEGA (Claves Corregidas y Unificadas)
-# ==========================================
-RIQUEZAS = {
-    "YaraLiva CALCINIT": {"CaO": 26.0, "NO3": 14.4, "NH4": 1.1, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
-    "Poly-Feed Pony (13-3-43)": {"CaO": 0.0, "NO3": 13.0, "NH4": 0.0, "P2O5": 3.0, "K2O": 43.0, "MgO": 0.0, "SO3": 0.0},
-    "Haifa DKP (0-41-54)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 41.0, "K2O": 54.0, "MgO": 0.0, "SO3": 0.0},
-    "Sulfato de Potasio (Solupotasse)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 50.0, "MgO": 0.0, "SO3": 18.0},
-    "Fosfato Monopotásico (MKP)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 52.0, "K2O": 34.0, "MgO": 0.0, "SO3": 0.0},
-    "Van Iperen Magboro": {"CaO": 0.0, "NO3": 10.8, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 15.5, "SO3": 0.0},
-    "Sulfato de Magnesio (Sulmag)": {"CaO": 0.0, "NO3": 0.0, "NH4": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 16.4, "SO3": 0.0},
-    "Nitrato de Amonio": {"CaO": 0.0, "NO3": 17.0, "NH4": 17.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
-    # Menores Sólidos Daymsa
-    "Naturquel Fe": 6.0,
-    "Klip Boro": 20.5,
-    "Kellus Cu": 13.5,
-    "Naturzinc": 13.0,
-    "Naturmanganeso": 12.0,
-    "Molibk": 10.0
-}
-
-# Modificador para el cálculo del Sulmag sólido peso/peso
+# Porcentajes de Menores Sólidos Daymsa
+PCT_FE = 6.0
+PCT_B = 20.5
+PCT_CU = 13.5
+PCT_ZN = 13.0
+PCT_MN = 12.0
+PCT_MO = 10.0
 S_SULMAG = 13.0
-
-def calcular_ppm_manual(gramos, riqueza, volumen):
-    if volumen <= 0 or gramos <= 0:
-        return 0.0
-    return (gramos * riqueza) / (volumen * 0.1)
 
 # ==========================================
 # BARRA LATERAL: CONTROL DE AGUA Y DOSIS MANUALES
@@ -81,42 +61,56 @@ with col4:
     tgt_mo = st.number_input("Meta Molibdeno (Mo):", value=0.0107, format="%.4f")
 
 # ==========================================
-# CÁLCULO DE PPM LOGRADAS EN TIEMPO REAL
+# MATEMÁTICA EN LÍNEA BASADA EN TU CALCULADORA DE MANO
 # ==========================================
-logrado = {"NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0}
+denominador_agua = volumen_agua * 0.1
 
-# Conversión de ingresos Kg a gramos para la fórmula
-f_gramos = {
-    "YaraLiva CALCINIT": kg_calcinit * 1000,
-    "Poly-Feed Pony (13-3-43)": kg_pony * 1000,
-    "Haifa DKP (0-41-54)": kg_dkp * 1000,
-    "Sulfato de Potasio (Solupotasse)": kg_soluk * 1000,
-    "Fosfato Monopotásico (MKP)": kg_mkp * 1000,
-    "Van Iperen Magboro": kg_magboro * 1000,
-    "Sulfato de Magnesio (Sulmag)": kg_sulfmg * 1000,
-    "Nitrato de Amonio": kg_nitamonio * 1000,
-}
+# Conversión y cálculo individual por producto (Kg * 1000 = Gramos)
+ppm_no3_calcinit = ((kg_calcinit * 1000.0) * 14.4) / denominador_agua
+ppm_nh4_calcinit = ((kg_calcinit * 1000.0) * 1.1) / denominador_agua
+ppm_cao_calcinit = ((kg_calcinit * 1000.0) * 26.0) / denominador_agua
 
-# Acumulación de Macros con lectura garantizada elemento por elemento
-for fert, gramos in f_gramos.items():
-    for elem, riqueza in RIQUEZAS[fert].items():
-        if elem in logrado:
-            logrado[elem] += calcular_ppm_manual(gramos, riqueza, volumen_agua)
+ppm_no3_pony = ((kg_pony * 1000.0) * 13.0) / denominador_agua
+ppm_p2o5_pony = ((kg_pony * 1000.0) * 3.0) / denominador_agua
+ppm_k2o_pony = ((kg_pony * 1000.0) * 43.0) / denominador_agua
 
-# Aporte de Azufre (S puro) exclusivo del Sulmag sólido
-ppm_s_sulmag = calcular_ppm_manual(f_gramos["Sulfato de Magnesio (Sulmag)"], S_SULMAG, volumen_agua)
+ppm_p2o5_dkp = ((kg_dkp * 1000.0) * 41.0) / denominador_agua
+ppm_k2o_dkp = ((kg_dkp * 1000.0) * 54.0) / denominador_agua
 
-# Aportes colaterales fijos de Potasio (3%) en los menores Klip Boro y Molibk
-logrado["K2O"] += calcular_ppm_manual(g_b, 3.0, volumen_agua)
-logrado["K2O"] += calcular_ppm_manual(g_mo, 3.0, volumen_agua)
+ppm_k2o_soluk = ((kg_soluk * 1000.0) * 50.0) / denominador_agua
+ppm_so3_soluk = ((kg_soluk * 1000.0) * 18.0) / denominador_agua
 
-# Cálculo de Menores en PPM
-ppm_fe = calcular_ppm_manual(g_fe, RIQUEZAS["Naturquel Fe"], volumen_agua)
-ppm_b = calcular_ppm_manual(g_b, RIQUEZAS["Klip Boro"], volumen_agua)
-ppm_cu = calcular_ppm_manual(g_cu, RIQUEZAS["Kellus Cu"], volumen_agua)
-ppm_zn = calcular_ppm_manual(g_zn, RIQUEZAS["Naturzinc"], volumen_agua)
-ppm_mn = calcular_ppm_manual(g_mn, RIQUEZAS["Naturmanganeso"], volumen_agua)
-ppm_mo = calcular_ppm_manual(g_mo, RIQUEZAS["Molibk"], volumen_agua)
+ppm_p2o5_mkp = ((kg_mkp * 1000.0) * 52.0) / denominador_agua
+ppm_k2o_mkp = ((kg_mkp * 1000.0) * 34.0) / denominador_agua
+
+ppm_mgo_magboro = ((kg_magboro * 1000.0) * 15.5) / denominador_agua
+ppm_no3_magboro = ((kg_magboro * 1000.0) * 10.8) / denominador_agua
+
+ppm_mgo_sulfmg = ((kg_sulfmg * 1000.0) * 16.4) / denominador_agua
+ppm_s_sulmag = ((kg_sulfmg * 1000.0) * S_SULMAG) / denominador_agua
+
+ppm_no3_nitamonio = ((kg_nitamonio * 1000.0) * 17.0) / denominador_agua
+ppm_nh4_nitamonio = ((kg_nitamonio * 1000.0) * 17.0) / denominador_agua
+
+# Aportes colaterales fijos de Potasio (3%) en los gramos de Klip Boro y Molibk
+ppm_k2o_boro_menor = (g_b * 3.0) / denominador_agua
+ppm_k2o_molibk_menor = (g_mo * 3.0) / denominador_agua
+
+# SUMATORIAS AGREGADAS TOTALES
+total_no3 = ppm_no3_calcinit + ppm_no3_pony + ppm_no3_magboro + ppm_no3_nitamonio
+total_nh4 = ppm_nh4_calcinit + ppm_nh4_nitamonio
+total_cao = ppm_cao_calcinit
+total_p2o5 = ppm_p2o5_pony + ppm_p2o5_dkp + ppm_p2o5_mkp
+total_k2o = ppm_k2o_pony + ppm_k2o_dkp + ppm_k2o_soluk + ppm_k2o_mkp + ppm_k2o_boro_menor + ppm_k2o_molibk_menor
+total_mgo = ppm_mgo_magboro + ppm_mgo_sulfmg
+
+# Menores Sólidos Daymsa
+ppm_fe = (g_fe * PCT_FE) / denominador_agua
+ppm_b = (g_b * PCT_B) / denominador_agua
+ppm_cu = (g_cu * PCT_CU) / denominador_agua
+ppm_zn = (g_zn * PCT_ZN) / denominador_agua
+ppm_mn = (g_mn * PCT_MN) / denominador_agua
+ppm_mo = (g_mo * PCT_MO) / denominador_agua
 
 # ==========================================
 # MATRIZ VISUAL DE CONTROL DINÁMICO
@@ -125,13 +119,13 @@ st.markdown("---")
 st.header("📋 Matriz de Auditoría y Verificación de Excesos (PPM Reales)")
 st.write("Modifica los requerimientos arriba o las dosis a la izquierda para balancear tu receta al instante:")
 
-st.write(f"**Nitrógeno Nitratado (NO₃⁻):** Logrado: `{logrado['NO3']:.1f}` / Meta: `{tgt_no3:.1f}` PPM")
-st.write(f"**Nitrógeno Amoniacal (NH₄⁺):** Logrado: `{logrado['NH4']:.1f}` / Meta: `{tgt_nh4:.1f}` PPM")
-st.write(f"**Calcio (CaO):** Logrado: `{logrado['CaO']:.1f}` / Meta: `{tgt_cao:.1f}` PPM")
-st.write(f"**Fósforo (P₂O₅):** Logrado: `{logrado['P2O5']:.1f}` / Meta: `{tgt_p2o5:.1f}` PPM")
-st.write(f"**Potasio (K₂O):** Logrado: `{logrado['K2O']:.1f}` / Meta: `{tgt_k2o:.1f}` PPM")
-st.write(f"**Magnesio (MgO):** Logrado: `{logrado['MgO']:.1f}` / Meta: `{tgt_mgo:.1f}` PPM")
-st.write(f"**Azufre Solupotasse (SO₃):** `{logrado['SO3']:.1f}` PPM | **Azufre Sulmag (S puro):** `{ppm_s_sulmag:.1f}` PPM")
+st.write(f"**Nitrógeno Nitratado (NO₃⁻):** Logrado: `{total_no3:.1f}` / Meta: `{tgt_no3:.1f}` PPM")
+st.write(f"**Nitrógeno Amoniacal (NH₄⁺):** Logrado: `{total_nh4:.1f}` / Meta: `{tgt_nh4:.1f}` PPM")
+st.write(f"**Calcio (CaO):** Logrado: `{total_cao:.1f}` / Meta: `{tgt_cao:.1f}` PPM")
+st.write(f"**Fósforo (P₂O₅):** Logrado: `{total_p2o5:.1f}` / Meta: `{tgt_p2o5:.1f}` PPM")
+st.write(f"**Potasio (K₂O):** Logrado: `{total_k2o:.1f}` / Meta: `{tgt_k2o:.1f}` PPM")
+st.write(f"**Magnesio (MgO):** Logrado: `{total_mgo:.1f}` / Meta: `{tgt_mgo:.1f}` PPM")
+st.write(f"**Azufre Solupotasse (SO₃):** `{ppm_so3_soluk:.1f}` PPM | **Azufre Sulmag (S puro):** `{ppm_s_sulmag:.1f}` PPM")
 
 st.markdown("#### Balance de Elementos Menores Logrado:")
 st.write(f"• **Hierro (Fe):** Logrado: `{ppm_fe:.2f}` / Meta: `{tgt_fe:.2f}` PPM")
