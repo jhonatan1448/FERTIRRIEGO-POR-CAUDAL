@@ -6,7 +6,7 @@ st.title("🌱 Simulador Manual de Fertirriego Avanzado")
 st.write("Escribe libremente tanto tus metas objetivo de PPM como los Kilogramos y Gramos para cuadrar los requerimientos a tu acomodo.")
 
 # ==========================================
-# BASE DE DATOS DE RIQUEZAS DE BODEGA (Claves unificadas para NO3 y NH4)
+# BASE DE DATOS DE RIQUEZAS DE BODEGA (Estructuras unificadas al 100%)
 # ==========================================
 RIQUEZAS = {
     "YaraLiva CALCINIT": {"CaO": 26.0, "NO3": 14.4, "NH4": 1.1, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0},
@@ -97,7 +97,7 @@ f_gramos = {
     "Nitrato de Amonio": kg_nitamonio * 1000,
 }
 
-# Acumulación de Macros con lectura unificada de Nitrógeno
+# Acumulación de Macros con lectura garantizada elemento por elemento
 for fert, gramos in f_gramos.items():
     for elem, riqueza in RIQUEZAS[fert].items():
         if elem in logrado:
