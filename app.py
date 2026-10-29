@@ -3,7 +3,7 @@ import streamlit as st
 st.set_page_config(page_title="Simulador de Fertirriego Colombia Pro", page_icon="🌱", layout="wide")
 
 st.title("🌱 Software de Fertirriego Profesional")
-st.write("Ajusta tus metas de PPM, los Kilogramos/Gramos a la izquierda, o añade fertilizantes nuevos a tu bodega en tiempo real.")
+st.write("Ajusta tus metas de PPM o los Kilogramos/Gramos a la izquierda para balancear tu receta al instante.")
 
 # Porcentajes de Menores Sólidos Daymsa
 PCT_FE = 6.0
@@ -18,49 +18,6 @@ PCT_MO = 10.0
 # ==========================================
 if "nuevos_fertilizantes" not in st.session_state:
     st.session_state.nuevos_fertilizantes = {}
-
-# ==========================================
-# FORMULARIO CENTRAL: REGISTRO MANUAL DE NUEVAS MARCAS
-# ==========================================
-st.header("📦 Creación y Registro de Nuevos Fertilizantes")
-with st.expander("➕ Haz clic aquí para registrar una marca o mezcla nueva en tu inventario"):
-    nombre_nuevo = st.text_input("Nombre Comercial del Fertilizante:", placeholder="Ej: Kelatex, Mix Menores, Fertisolo, etc.")
-    
-    st.markdown("#### 🥦 Macronutrientes (%)")
-    col_n1, col_n2, col_n3, col_n4 = st.columns(4)
-    with col_n1:
-        n_no3 = st.number_input("% Nitrato (NO₃⁻) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-        n_nh4 = st.number_input("% Amonio (NH₄⁺) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-    with col_n2:
-        n_p2o5 = st.number_input("% Fósforo (P₂O₅) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-        n_k2o = st.number_input("% Potasio (K₂O) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-    with col_n3:
-        n_cao = st.number_input("% Calcio (CaO) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-        n_mgo = st.number_input("% Magnesio (MgO) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-    with col_n4:
-        n_so3 = st.number_input("% Azufre (SO₃) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-        
-    st.markdown("#### 🧪 Micronutrientes (%)")
-    col_m1, col_m2, col_m3 = st.columns(3)
-    with col_m1:
-        n_fe = st.number_input("% Hierro (Fe) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.01)
-        n_mn = st.number_input("% Manganeso (Mn) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.01)
-    with col_m2:
-        n_zn = st.number_input("% Zinc (Zn) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.01)
-        n_cu = st.number_input("% Cobre (Cu) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.01)
-    with col_m3:
-        n_b = st.number_input("% Boro (B) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.01)
-        n_mo = st.number_input("% Molibdeno (Mo) del saco nuevo:", min_value=0.0, max_value=100.0, value=0.0, step=0.001, format="%.4f")
-        
-    if st.button("💾 Guardar e Incorporar a la Barra Lateral"):
-        if nombre_nuevo:
-            st.session_state.nuevos_fertilizantes[nombre_nuevo] = {
-                "CaO": n_cao, "NO3": n_no3, "NH4": n_nh4, "P2O5": n_p2o5, "K2O": n_k2o, "MgO": n_mgo, "SO3": n_so3,
-                "Fe": n_fe, "Mn": n_mn, "Zn": n_zn, "Cu": n_cu, "B": n_b, "Mo": n_mo
-            }
-            st.success(f"✅ ¡{nombre_nuevo} guardado! Ya puedes asignarle kilos a la izquierda.")
-        else:
-            st.error("⚠️ Por favor escribe un nombre comercial válido.")
 
 # ==========================================
 # BARRA LATERAL: CONTROL DE AGUA Y DOSIS MANUALES
@@ -79,7 +36,7 @@ kg_magboro = st.sidebar.number_input("Van Iperen Magboro (Kg):", min_value=0.0, 
 kg_sulfmg = st.sidebar.number_input("Sulfato de Magnesio Sulmag (Kg):", min_value=0.0, value=3.17, step=0.1)
 kg_nitamonio = st.sidebar.number_input("Nitrato de Amonio (Kg):", min_value=0.0, value=0.00, step=0.1)
 
-# Renderizado dinámico para productos nuevos
+# Renderizado dinámico para productos nuevos en la barra lateral
 pesos_nuevos = {}
 if st.session_state.nuevos_fertilizantes:
     st.sidebar.markdown("---")
@@ -98,7 +55,6 @@ g_mo = st.sidebar.number_input("Molibk (g):", min_value=0.0, value=2.8, step=0.5
 # ==========================================
 # PANEL CENTRAL PASO 1: METAS MODIFICABLES
 # ==========================================
-st.markdown("---")
 st.header("🎯 1. Tus Metas Teóricas Requeridas (PPM)")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -133,7 +89,7 @@ ppm_p2o5_mkp = ((kg_mkp * 1000.0) * 52.0) / denominador_agua
 ppm_k2o_mkp = ((kg_mkp * 1000.0) * 34.0) / denominador_agua
 ppm_mgo_magboro = ((kg_magboro * 1000.0) * 15.5) / denominador_agua
 ppm_mgo_sulfmg = ((kg_sulfmg * 1000.0) * 16.4) / denominador_agua
-ppm_so3_sulfmg = ((kg_sulfmg * 1000.0) * 13.0) # Corregido con el número directo del Sulmag escrito plano
+ppm_so3_sulfmg = ((kg_sulfmg * 1000.0) * 13.0)
 
 # Nitrógeno Nítrico y Amoniacal Base de la Libreta
 ppm_no3_calcinit = (kg_calcinit * 1000.0 * 14.4) / (2600.0 / (197.3 / 72.2))
@@ -167,3 +123,45 @@ for prod_n, kg_n in pesos_nuevos.items():
         extra_mo += ((kg_n * 1000.0) * db_n.get("Mo", 0.0)) / denominador_agua
 
 # CONSOLIDACIÓN FINAL TOTAL DE PPM LOGRADAS
+total_no3 = ppm_no3_calcinit + ppm_no3_pony + ppm_no3_magboro + ppm_no3_nitamonio + (extra_no3_crudo * (197.3 / 72.2))
+total_nh4 = ppm_nh4_calcinit + ppm_nh4_nitamonio + extra_nh4
+total_cao = ppm_cao_calcinit + extra_cao
+total_p2o5 = ppm_p2o5_pony + ppm_p2o5_dkp + ppm_p2o5_mkp + extra_p2o5
+total_mgo = ppm_mgo_magboro + ppm_mgo_sulfmg + extra_mgo
+total_so3 = ppm_so3_soluk + ppm_so3_sulfmg + extra_so3
+
+ppm_k2o_boro_menor = (g_b * 3.0) / denominador_agua
+ppm_k2o_molibk_menor = (g_mo * 3.0) / denominador_agua
+total_k2o = ppm_k2o_pony + ppm_k2o_dkp + ppm_k2o_soluk + ppm_k2o_mkp + ppm_k2o_boro_menor + ppm_k2o_molibk_menor + extra_k2o
+
+ppm_fe = ((g_fe * PCT_FE) / denominador_agua) + extra_fe
+ppm_b = ((g_b * PCT_B) / denominador_agua) + extra_b
+ppm_cu = ((g_cu * PCT_CU) / denominador_agua) + extra_cu
+ppm_zn = ((g_zn * PCT_ZN) / denominador_agua) + extra_zn
+ppm_mn = ((g_mn * PCT_MN) / denominador_agua) + extra_mn
+ppm_mo = ((g_mo * PCT_MO) / denominador_agua) + extra_mo
+
+# ==========================================
+# 📊 2. MATRIZ EN BLOQUES DE COMPARACIÓN VISUAL DIRECTA (OBLIGATORIA ARRIBA)
+# ==========================================
+st.markdown("---")
+st.header("📋 2. Matriz de Auditoría Dinámica (Logrado vs Requerimiento)")
+st.write("Seguimiento instantáneo de PPM. El valor inferior muestra el balance matemático exacto:")
+
+st.markdown("### 🥦 Balance de Macronutrientes (PPM)")
+c_b1, c_b2, c_b3, c_b4, c_b5, c_b6, c_b7 = st.columns(7)
+with c_b1: st.metric(label="N-Nitrato (NO₃⁻)", value=f"{total_no3:.1f}", delta=f"{total_no3 - tgt_no3:.1f} vs {tgt_no3:.1f}")
+with c_b2: st.metric(label="N-Amonio (NH₄⁺)", value=f"{total_nh4:.1f}", delta=f"{total_nh4 - tgt_nh4:.1f} vs {tgt_nh4:.1f}")
+with c_b3: st.metric(label="Calcio (CaO)", value=f"{total_cao:.1f}", delta=f"{total_cao - tgt_cao:.1f} vs {tgt_cao:.1f}")
+with c_b4: st.metric(label="Fósforo (P₂O₅)", value=f"{total_p2o5:.1f}", delta=f"{total_p2o5 - tgt_p2o5:.1f} vs {tgt_p2o5:.1f}")
+with c_b5: st.metric(label="Potasio (K₂O)", value=f"{total_k2o:.1f}", delta=f"{total_k2o - tgt_k2o:.1f} vs {tgt_k2o:.1f}")
+with c_b6: st.metric(label="Magnesio (MgO)", value=f"{total_mgo:.1f}", delta=f"{total_mgo - tgt_mgo:.1f} vs {tgt_mgo:.1f}")
+with c_b7: st.metric(label="Azufre (SO₃)", value=f"{total_so3:.1f}", delta=f"{total_so3 - tgt_so3:.1f} vs {tgt_so3:.1f}")
+
+st.markdown("### 🧪 Balance de Elementos Menores (PPM)")
+c_m1, c_m2, c_m3, c_m4, c_m5, c_m6 = st.columns(6)
+with c_m1: st.metric(label="Hierro (Fe)", value=f"{ppm_fe:.2f}", delta=f"{ppm_fe - tgt_fe:.2f} vs {tgt_fe:.2f}")
+with c_m2: st.metric(label="Manganeso (Mn)", value=f"{ppm_mn:.2f}", delta=f"{ppm_mn - tgt_mn:.2f} vs {tgt_mn:.2f}")
+with c_m3: st.metric(label="Zinc (Zn)", value=f"{ppm_zn:.2f}", delta=f"{ppm_zn - tgt_zn:.2f} vs {tgt_zn:.2f}")
+with c_m4: st.metric(label="Cobre (Cu)", value=f"{ppm_cu:.2f}", delta=f"{ppm_cu - tgt_cu:.2f} vs {tgt_cu:.2f}")
+with c_m5: st.metric(label="Boro (B)", value=f"{ppm_b:.2f}", delta=f"{ppm_b - tgt_b:.2f} vs {tgt_b:.2f}")
