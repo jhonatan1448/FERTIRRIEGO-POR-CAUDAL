@@ -93,7 +93,7 @@ aportes = {"NO3": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0
 pesos_finales = {}
 
 # ==============================================================================
-# NUEVO ALGORITMO DE EQUILIBRIO EN CADENA (Anti-Excesos)
+# ALGORITMO DE BALANCE DINÁMICO SECUENCIAL
 # ==============================================================================
 
 # Paso 1. MICRONUTRIENTES DAYMSA
@@ -129,7 +129,6 @@ aportes["NH4"] += calcular_ppm(g_calcinit, FERTILIZANTES_DB["YaraLiva CALCINIT"]
 if opcion_npk != "Ninguno (Usar Simples)":
     db_npk = FERTILIZANTES_DB[opcion_npk]
     
-    # Verificamos cuánto NPK cabe sin pasarnos de las metas de P2O5 ni de K2O restante
     k2o_disp = max(0.0, tgt_k2o - aportes["K2O"])
     g_por_p = calcular_gramos(tgt_p2o5, db_npk["P2O5"], volumen_agua) if db_npk["P2O5"] > 0 else 999999
     g_por_k = calcular_gramos(k2o_disp, db_npk["K2O"], volumen_agua) if db_npk["K2O"] > 0 else 999999
@@ -145,7 +144,6 @@ k2o_restante = max(0.0, tgt_k2o - aportes["K2O"])
 if k2o_restante > 0:
     db_k = FERTILIZANTES_DB[opcion_k]
     
-    # Si es Haifa DKP, revisamos que su fósforo colateral no se pase de la meta
     if opcion_k == "Haifa DKP (0-41-54)":
         p2o5_disp = max(0.0, tgt_p2o5 - aportes["P2O5"])
         g_por_k_dkp = calcular_gramos(k2o_restante, db_k["K2O"], volumen_agua)
@@ -165,7 +163,6 @@ if p2o5_restante > 0:
     g_mkp = calcular_gramos(p2o5_restante, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["P2O5"], volumen_agua)
     pesos_finales["Fosfato Monopotásico (MKP)"] = g_mkp
     aportes["P2O5"] += p2o5_restante
-    # El MKP arrastra Potasio
     aportes["K2O"] += calcular_ppm(g_mkp, FERTILIZANTES_DB["Fosfato Monopotásico (MKP)"]["K2O"], volumen_agua)
 
 # Paso 7. COMPENSACIÓN CONTROLADA DE NITRÓGENO (Nitrato de Amonio)
@@ -180,7 +177,7 @@ if n_compensar > 0:
     aportes["NH4"] += calcular_ppm(g_nit_amonio, FERTILIZANTES_DB["Nitrato de Amonio"]["NH4"], volumen_agua)
 
 # ==========================================
-# VISUALIZACIÓN: TABLA DE CONTROL DE APORTES
+# VISUALIZACIÓN CORREGIDA: TABLA COMPLETA DE APORTES
 # ==========================================
 st.markdown("---")
 st.header("📋 Matriz de Auditoría y Verificación de Excesos (PPM Reales)")
@@ -189,4 +186,6 @@ tabla_data = {
     "Meta Requerida": [f"{tgt_no3:.1f}", f"{tgt_nh4:.1f}", f"{tgt_cao:.1f}", f"{tgt_p2o5:.1f}", f"{tgt_k2o:.1f}", f"{tgt_mgo:.1f}"],
     "Total Logrado": [f"{aportes['NO3']:.1f}", f"{aportes['NH4']:.1f}", f"{aportes['CaO']:.1f}", f"{aportes['P2O5']:.1f}", f"{aportes['K2O']:.1f}", f"{aportes['MgO']:.1f}"],
     "Estado de Control": [
-        "🎯 Óptimo" if aportes["NO3"] <= tgt_no3 + 1 else "⚠️ EXCESO BLOQUEADO",
+        "🎯 Óptimo" if aportes["NO3"] <= tgt_no3 + 1 else "⚠️ EXCESO COMPENSADO",
+        "🎯 Óptimo" if aportes["NH4"] <= tgt_nh4 + 1 else "⚠️ EXCESO COMPENSADO",
+        "🎯 Óptimo" if aportes["CaO"] <= tgt_cao + 1 else "⚠️ EXCESO COMPENSADO",
