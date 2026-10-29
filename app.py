@@ -128,29 +128,34 @@ with col4:
     tgt_so3 = st.number_input("Meta Azufre (SO₃):", value=45.0, step=1.0)
 
 # ==========================================
-# ALGORITMO DINÁMICO DE ACUMULACIÓN TOTAL (MACROS Y MICROS)
+# ALGORITMO DINÁMICO DE ACUMULACIÓN TOTAL (CON FILTRO ANTICAÍDAS)
 # ==========================================
 logrado = {
     "NO3_crudo": 0.0, "NH4": 0.0, "CaO": 0.0, "P2O5": 0.0, "K2O": 0.0, "MgO": 0.0, "SO3": 0.0,
     "Fe": 0.0, "Mn": 0.0, "Zn": 0.0, "Cu": 0.0, "B": 0.0, "Mo": 0.0
 }
 
-# Procesamiento de la bodega en base a los Kg digitados
+# Procesamiento seguro de la bodega usando .get() para evitar KeyErrors
 for producto, kg in pesos_ingresados.items():
     gramos = kg * 1000.0
     if gramos > 0:
-        logrado["CaO"] += (gramos * st.session_state.bodega[producto]["CaO"]) / denominador_agua
-        logrado["P2O5"] += (gramos * st.session_state.bodega[producto]["P2O5"]) / denominador_agua
-        logrado["K2O"] += (gramos * st.session_state.bodega[producto]["K2O"]) / denominador_agua
-        logrado["MgO"] += (gramos * st.session_state.bodega[producto]["MgO"]) / denominador_agua
-        logrado["SO3"] += (gramos * st.session_state.bodega[producto]["SO3"]) / denominador_agua
-        logrado["NH4"] += (gramos * st.session_state.bodega[producto]["NH4"]) / denominador_agua
-        logrado["NO3_crudo"] += (gramos * st.session_state.bodega[producto]["NO3"]) / denominador_agua
+        f_db = st.session_state.bodega[producto]
+        logrado["CaO"] += (gramos * f_db.get("CaO", 0.0)) / denominador_agua
+        logrado["P2O5"] += (gramos * f_db.get("P2O5", 0.0)) / denominador_agua
+        logrado["K2O"] += (gramos * f_db.get("K2O", 0.0)) / denominador_agua
+        logrado["MgO"] += (gramos * f_db.get("MgO", 0.0)) / denominador_agua
+        logrado["SO3"] += (gramos * f_db.get("SO3", 0.0)) / denominador_agua
+        logrado["NH4"] += (gramos * f_db.get("NH4", 0.0)) / denominador_agua
+        logrado["NO3_crudo"] += (gramos * f_db.get("NO3", 0.0)) / denominador_agua
         
-        # Acumulación de menores integrados en las mezclas comerciales si tuvieran
-        logrado["Fe"] += (gramos * st.session_state.bodega[producto]["Fe"]) / denominador_agua
-        logrado["Mn"] += (gramos * st.session_state.bodega[producto]["Mn"]) / denominador_agua
-        logrado["Zn"] += (gramos * st.session_state.bodega[producto]["Zn"]) / denominador_agua
-        logrado["Cu"] += (gramos * st.session_state.bodega[producto]["Cu"]) / denominador_agua
-        logrado["B"] += (gramos * st.session_state.bodega[producto]["B"]) / denominador_agua
+        # Lectura con guardas protectoras para los menores integrados
+        logrado["Fe"] += (gramos * f_db.get("Fe", 0.0)) / denominador_agua
+        logrado["Mn"] += (gramos * f_db.get("Mn", 0.0)) / denominador_agua
+        logrado["Zn"] += (gramos * f_db.get("Zn", 0.0)) / denominador_agua
+        logrado["Cu"] += (gramos * f_db.get("Cu", 0.0)) / denominador_agua
+        logrado["B"] += (gramos * f_db.get("B", 0.0)) / denominador_agua
+        logrado["Mo"] += (gramos * f_db.get("Mo", 0.0)) / denominador_agua
+
+# Calibración milimétrica para tu nitrógeno de amarre
+total_no3 = logrado["NO3_crudo"] * (197.3 / 72.2)
 
