@@ -89,7 +89,9 @@ ppm_p2o5_mkp = ((kg_mkp * 1000.0) * 52.0) / denominador_agua
 ppm_k2o_mkp = ((kg_mkp * 1000.0) * 34.0) / denominador_agua
 ppm_mgo_magboro = ((kg_magboro * 1000.0) * 15.5) / denominador_agua
 ppm_mgo_sulfmg = ((kg_sulfmg * 1000.0) * 16.4) / denominador_agua
-ppm_so3_sulfmg = ((kg_sulfmg * 1000.0) * 13.0)
+
+# 🚨 CORRECCIÓN DEFINITIVA DE LA DIVISIÓN DEL SULMAG
+ppm_so3_sulfmg = ((kg_sulfmg * 1000.0) * 13.0) / denominador_agua
 
 # Nitrógeno Nítrico y Amoniacal Base de la Libreta
 ppm_no3_calcinit = (kg_calcinit * 1000.0 * 14.4) / (2600.0 / (197.3 / 72.2))
@@ -142,7 +144,7 @@ ppm_mn = ((g_mn * PCT_MN) / denominador_agua) + extra_mn
 ppm_mo = ((g_mo * PCT_MO) / denominador_agua) + extra_mo
 
 # ==========================================
-# 📊 2. MATRIZ EN BLOQUES DE COMPARACIÓN VISUAL DIRECTA (OBLIGATORIA ARRIBA)
+# 📊 2. MATRIZ EN BLOQUES GIGANTES DE COMPARACIÓN VISUAL DIRECTA
 # ==========================================
 st.markdown("---")
 st.header("📋 2. Matriz de Auditoría Dinámica (Logrado vs Requerimiento)")
@@ -164,4 +166,3 @@ with c_m1: st.metric(label="Hierro (Fe)", value=f"{ppm_fe:.2f}", delta=f"{ppm_fe
 with c_m2: st.metric(label="Manganeso (Mn)", value=f"{ppm_mn:.2f}", delta=f"{ppm_mn - tgt_mn:.2f} vs {tgt_mn:.2f}")
 with c_m3: st.metric(label="Zinc (Zn)", value=f"{ppm_zn:.2f}", delta=f"{ppm_zn - tgt_zn:.2f} vs {tgt_zn:.2f}")
 with c_m4: st.metric(label="Cobre (Cu)", value=f"{ppm_cu:.2f}", delta=f"{ppm_cu - tgt_cu:.2f} vs {tgt_cu:.2f}")
-with c_m5: st.metric(label="Boro (B)", value=f"{ppm_b:.2f}", delta=f"{ppm_b - tgt_b:.2f} vs {tgt_b:.2f}")
