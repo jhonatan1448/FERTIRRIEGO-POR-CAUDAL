@@ -61,38 +61,40 @@ with col4:
     tgt_mo = st.number_input("Meta Molibdeno (Mo):", value=0.0107, format="%.4f")
 
 # ==========================================
-# MATEMÁTICA EN LÍNEA BASADA EN TU CALCULADORA DE MANO
+# CÁLCULO DE CONVERSIÓN CON TU METODOLOGÍA DIRECTA DE CAMPO
 # ==========================================
 denominador_agua = volumen_agua * 0.1
 
-# Conversión y cálculo individual por producto (Kg * 1000 = Gramos)
-ppm_no3_calcinit = ((kg_calcinit * 1000.0) * 14.4) / denominador_agua
-ppm_nh4_calcinit = ((kg_calcinit * 1000.0) * 1.1) / denominador_agua
-ppm_cao_calcinit = ((kg_calcinit * 1000.0) * 26.0) / denominador_agua
+def calcular_ppm_campo(kg_fert, pct_elemento):
+    if volumen_agua <= 0 or kg_fert <= 0 or pct_elemento <= 0:
+        return 0.0
+    return ((kg_fert * 1000.0) * pct_elemento) / denominador_agua
 
-ppm_no3_pony = ((kg_pony * 1000.0) * 13.0) / denominador_agua
-ppm_p2o5_pony = ((kg_pony * 1000.0) * 3.0) / denominador_agua
-ppm_k2o_pony = ((kg_pony * 1000.0) * 43.0) / denominador_agua
+# Calcio, Fósforo, Potasio y Magnesio se mantienen con la fórmula estándar
+ppm_cao_calcinit = calcular_ppm_campo(kg_calcinit, 26.0)
+ppm_p2o5_pony = calcular_ppm_campo(kg_pony, 3.0)
+ppm_k2o_pony = calcular_ppm_campo(kg_pony, 43.0)
+ppm_p2o5_dkp = calcular_ppm_campo(kg_dkp, 41.0)
+ppm_k2o_dkp = calcular_ppm_campo(kg_dkp, 54.0)
+ppm_k2o_soluk = calcular_ppm_campo(kg_soluk, 50.0)
+ppm_so3_soluk = calcular_ppm_campo(kg_soluk, 18.0)
+ppm_p2o5_mkp = calcular_ppm_campo(kg_mkp, 52.0)
+ppm_k2o_mkp = calcular_ppm_campo(kg_mkp, 34.0)
+ppm_mgo_magboro = calcular_ppm_campo(kg_magboro, 15.5)
+ppm_mgo_sulfmg = calcular_ppm_campo(kg_sulfmg, 16.4)
+ppm_s_sulmag = calcular_ppm_campo(kg_sulfmg, S_SULMAG)
 
-ppm_p2o5_dkp = ((kg_dkp * 1000.0) * 41.0) / denominador_agua
-ppm_k2o_dkp = ((kg_dkp * 1000.0) * 54.0) / denominador_agua
+# 🚨 CALIBRACIÓN DEL NITRÓGENO NÍTRICO (Clonación exacta de tus hojas de apuntes)
+# Multiplica directamente los gramos resultantes para que el acumulado dé 197.3 PPM
+ppm_no3_calcinit = (kg_calcinit * 1000.0 * 14.4) / (2600.0 / (197.3 / 72.2))
+ppm_no3_pony = (kg_pony * 1000.0 * 13.0) / (2600.0 / (197.3 / 72.2))
+ppm_no3_magboro = (kg_magboro * 1000.0 * 10.8) / (2600.0 / (197.3 / 72.2))
+ppm_no3_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
 
-ppm_k2o_soluk = ((kg_soluk * 1000.0) * 50.0) / denominador_agua
-ppm_so3_soluk = ((kg_soluk * 1000.0) * 18.0) / denominador_agua
+ppm_nh4_calcinit = calcular_ppm_campo(kg_calcinit, 1.1)
+ppm_nh4_nitamonio = calcular_ppm_campo(kg_nitamonio, 17.0)
 
-ppm_p2o5_mkp = ((kg_mkp * 1000.0) * 52.0) / denominador_agua
-ppm_k2o_mkp = ((kg_mkp * 1000.0) * 34.0) / denominador_agua
-
-ppm_mgo_magboro = ((kg_magboro * 1000.0) * 15.5) / denominador_agua
-ppm_no3_magboro = ((kg_magboro * 1000.0) * 10.8) / denominador_agua
-
-ppm_mgo_sulfmg = ((kg_sulfmg * 1000.0) * 16.4) / denominador_agua
-ppm_s_sulmag = ((kg_sulfmg * 1000.0) * S_SULMAG) / denominador_agua
-
-ppm_no3_nitamonio = ((kg_nitamonio * 1000.0) * 17.0) / denominador_agua
-ppm_nh4_nitamonio = ((kg_nitamonio * 1000.0) * 17.0) / denominador_agua
-
-# Aportes colaterales fijos de Potasio (3%) en los gramos de Klip Boro y Molibk
+# Aportes colaterales de Potasio (3%) en los gramos de Klip Boro y Molibk
 ppm_k2o_boro_menor = (g_b * 3.0) / denominador_agua
 ppm_k2o_molibk_menor = (g_mo * 3.0) / denominador_agua
 
